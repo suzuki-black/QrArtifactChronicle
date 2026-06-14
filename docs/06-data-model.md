@@ -34,8 +34,9 @@ type Artifact = {
 
   // --- 個体差テキスト ---
   // ⚠️ 実装（現況）: 下記スロット構造ではなく、民明書房調の単一段落を生成（[04]4.5 実装メモ）。
-  //    FFI(RenderedImage)では description: String 一本で返す。スロット案は将来の構造化用に残置。
-  description: string          // 「詳説 世界の遺物（萬象書房 1890年刊）」抜粋体裁の解説文
+  //    FFI(RenderedImage)では description: String 一本で返す。言語は生成パラメータ（lang: Ja/En）。
+  //    描画(画像)は言語非依存。description のみ言語別に生成される（describe_qr(text,lang)）。
+  description: string          // 「詳説 世界の遺物（萬象書房 1890年刊）」抜粋体裁の解説文（選択言語）
 
   // --- 画像（実体ではなく参照, [05]） ---
   // angle は常に 0（アングルは1枚に確定 / [05]5.4）。将来の擬似3D拡張のため枠だけ残す。
@@ -51,9 +52,11 @@ type Artifact = {
 ## 6.3 図鑑（コレクション）の永続化 — 軽量主義
 
 > ⚠️ **実装メモ（現況）**: macOSプロトタイプは下記のSQLite軽量モデルを**まだ採用していない**。
-> 実際は Swift 側 `GameModel` が収集物を **`collection.json`（Application Support）に保存**し、
-> **合成済みPNGや解説文をそのまま含めている**（＝この節の「画像を保存しない」方針とは未一致）。
-> プロト段階の割り切り。下記の「キーから再生成する軽量モデル」への移行はロードマップ（docs/08 8.11）。
+> 実際は Swift 側 `GameModel.Collected` を **`collection.json`（Application Support）に保存**する。
+> 保存するのは **QR文字列(text) ＋ 合成済みPNG ＋ 属性**（civ/era/category/各レア度/保存度/汚れ/破損/段）。
+> **解説文(description)は保存せず**、表示時に `describe_qr(text, lang)` で**言語別に都度再生成**する
+> （表示名も civ/era/category＋★ からSwiftが多言語生成）。画像PNGを抱える点はこの節の「画像を保存しない」
+> 方針と未一致だが、プロト段階の割り切り。「キーから完全再生成する軽量モデル」への移行はロードマップ（docs/08 8.11）。
 
 **（設計目標）画像も `Artifact` 全体も保存しない。** 再生成可能なので、保存するのは復元に必要な最小キーだけ。
 

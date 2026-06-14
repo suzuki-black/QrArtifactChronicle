@@ -34,7 +34,7 @@ configureAssets(dir: "dist/assets")
 let outDir = "target/artifacts"
 try? FileManager.default.createDirectory(atPath: outDir, withIntermediateDirectories: true)
 func renderAndSave(_ name: String, _ text: String) {
-    let img = renderQr(text: text)
+    let img = renderQr(text: text, lang: .ja)
     let path = "\(outDir)/\(name).png"
     do {
         try img.png.write(to: URL(fileURLWithPath: path))

@@ -1,12 +1,20 @@
 # QrArtifactChronicle 🏺
 
-> Scan any QR code and excavate a fictional ancient artifact — deterministically.
-> The same QR always yields the same artifact; a finite database feels infinite.
+**Scan any QR code. Discover a unique artifact from a lost civilization. Same QR → same artifact, always.**
 
-> ⚠️ **Prototype.** Early proof-of-concept. The deterministic core is solid and fully tested,
-> but the app, artwork and asset pipeline are placeholders meant for iteration.
-> The in-app UI is currently **Japanese only** (English localization is on the roadmap; a
-> translation glossary is provided below).
+Turn the QR codes you meet every day into relics of imaginary ancient civilizations — then
+collect them into your own museum.
+
+<p align="center">
+  <img src="docs/screenshots/hero-1.png" width="240" alt="excavated artifact — blade">
+  <img src="docs/screenshots/hero-2.png" width="240" alt="excavated artifact — architecture fragment">
+  <img src="docs/screenshots/hero-3.png" width="240" alt="excavated artifact — ritual disc">
+</p>
+
+> ⚠️ **Prototype (v0.2.0).** The deterministic engine is solid and fully tested. The artwork is
+> currently **stylized placeholder graphics generated procedurally** — the photo-realistic,
+> "museum / dig-site / catalog" rendering described below is the **design goal**, not the current
+> look. Treat the images above as real engine output, not final art.
 
 **[English](#english) · [日本語](#日本語)**
 
@@ -16,231 +24,199 @@
 
 ## What is this?
 
-Read a real-world QR code → hash its contents → generate a fictional artifact of a made-up
-ancient civilization. Rarity, civilization, era, category, colour, dirt, damage and a
-tongue-in-cheek encyclopaedia blurb are all derived **deterministically** from the QR.
-Collect them into an exhibition room.
+Point your camera at *any* QR code — a poster, a business card, a drink can — and the app
+"excavates" a fictional artifact: its civilization, era, category, colour, dirt, damage, and a
+tongue-in-cheek encyclopaedia entry are all derived **deterministically** from the QR's contents.
+The same code always yields the exact same artifact, anywhere, forever.
 
-- **Same QR → same artifact, always** (no randomness, no timestamps).
-- **Finite base DB × infinite composition** — colour shifts, dirt/damage layers and flavour
-  text make a few thousand base records feel limitless (>10¹² combinations).
-- **Gentle gacha-style rarity** (★1 ≈ 40%, ★10 ≈ 0.01%).
-- **Era bonus** — if the QR content embeds a real date, older QRs reach the mythic ★11–★13.
-- **Offline** — no LLM/server at runtime; everything is precomputed/bundled.
+### This is *not* a barcode-battler
+
+No monsters, no battles, no stats to grind. QrArtifactChronicle is its own genre:
+
+> **Archaeology × photography × a collection album.** A deterministic *artifact* generator — your
+> everyday QR codes become an excavation site, and your collection becomes a museum.
+
+## Core features
+
+- 🎲 **Deterministic** — same QR → same artifact, always. No randomness, no timestamps.
+- 📴 **Fully offline** — no server, no LLM at runtime. Everything is precomputed/bundled.
+- 🖼️ **Generated artifact imagery** — each piece is composed on the fly (shape, colour, dirt,
+  damage, preservation), so no two feel the same.
+- 🏺 **Dirt · cracks · preservation, composited live** — wear and grime are layered at render time.
+- 📜 **Invented civilizations & eras** with a deliberately pompous, dubious encyclopaedia blurb.
+- 🏛️ **Exhibition room** — auto-saved collection with search and category / rarity filters.
+- 🌐 **Bilingual (English / 日本語)** — switch instantly in Settings ⚙️; even the flavour text.
+- ✨ **Gentle, gacha-style rarity** (★1 ≈ 40% … ★10 ≈ 0.01%); mythic ★11–13 only from genuinely
+  old, dated QR codes.
+
+## Why "photographs"? (the vision)
+
+The goal is for every artifact to look like a **museum-grade photograph** — the same relic shown
+as a glass-case *museum* exhibit, a muddy *dig-site* find, and a clean *catalogue* plate. Dirt,
+cracks and preservation are applied on the fly so each piece feels like a real object pulled from
+the ground. *(In this prototype the renderer is a procedural placeholder; the photographic
+pipeline is on the roadmap — see [docs/05](docs/05-image-pipeline.md).)*
+
+## Your daily life becomes a dig site
+
+Every QR code you run into is a potential find. Collect them, fill your **Exhibition**, and build
+a personal archaeological archive of a world that never existed.
 
 ## How to play
 
-1. Tap **📷 Excavate with camera**. (In a debug build you can instead type any text and tap
-   **Excavate**, or hit **Random**.)
-2. Point the camera at any QR code. It is read **automatically** — no shutter, and scanned
-   links are never auto-opened.
-3. Enjoy the retro dig animation:
-   - **New find** → a girl digs it up → **"New discovery!"** → the artifact is revealed and
-     saved to your collection.
-   - **Already owned** → your stern master scolds you ("no two artifacts are alike — you can't
-     take it from the exhibition!"). The same artifact is shown but not re-added.
-4. Open the **🏛 Exhibition** (top-right) to browse everything you've found. Search by text and
-   filter by **category** and **rarity**.
-5. Tap any artifact card to open its **detail page** (image, stats, and the encyclopaedia blurb).
-6. Mythic ★11–★13 only appear from QR codes that contain a genuinely old real-world date — a
-   long-term collection goal.
+1. Tap **📷 Excavate with camera** (debug builds also allow typing any text, or **Random**).
+2. Point at any QR code — it reads **automatically** (no shutter; scanned links are never opened).
+3. Watch the retro dig animation:
+   - **New find** → a girl digs it up → *"New discovery!"* → the artifact is revealed & saved.
+   - **Already owned** → your stern master scolds you (*"no two artifacts are alike — you can't
+     take it from the exhibition!"*).
+4. Open the **🏛 Exhibition** to browse, search and filter by category / rarity.
+5. Tap a card for the **detail page** (image, stats, and the encyclopaedia entry).
 
-> **Camera trouble?** The MacBook built-in camera is fixed-focus and often struggles with QR
-> codes. Use your **iPhone as a Continuity Camera** (autofocus reads QR easily): keep it near
-> the Mac (same Apple ID, Wi-Fi + Bluetooth on), still & locked, then pick it from the camera
-> menu in the scan screen (*Re-scan cameras* if it isn't listed). An external USB webcam also
-> works. For the built-in camera, hold the QR ~30–50 cm away, large and bright, avoid glare.
+> **Camera tip (macOS).** The MacBook built-in camera is fixed-focus and struggles with QR codes.
+> Use your **iPhone as a Continuity Camera** (autofocus reads them easily): keep it nearby (same
+> Apple ID, Wi-Fi + Bluetooth on), still & locked, then pick it from the camera menu (*Re-scan
+> cameras* if needed). An external webcam also works.
 
-## In-game text glossary (JP → EN)
+---
 
-The UI is Japanese for now. Key strings:
-
-| Japanese | English |
-|----------|---------|
-| QR考古学 | QR Archaeology (app title) |
-| 発掘 / カメラで発掘 | Excavate / Excavate with camera |
-| 展示室 | Exhibition Room |
-| 遺物詳細 | Artifact detail |
-| もどる / とじる | Back / Close |
-| 入力方法: 手動 / カメラ | Input method: Manual / Camera *(debug)* |
-| ランダム / 分布 / リセット | Random / Distribution / Reset *(debug)* |
-| 年代（古いほど高レア・神話級） | Era *(older = rarer; mythic)* |
-| すべて / カメラを再検索 | All / Re-scan cameras |
-| まだ何も発掘していません | Nothing excavated yet |
-| QRコードを枠内に収めてください | Fit the QR code in the frame |
-| はっくつ ちゅう… / …ザクッ | Excavating… / *(dig SFX)* |
-| ✨ しんはっけん！ ✨ / あたらしい いぶつ を てに いれた！ | ✨ New discovery! ✨ / You got a new artifact! |
-| めっ！ もちだしきんし！ | No! Don't take it out! |
-| おなじ いぶつは ２つと ない！ | No two artifacts are alike! |
-| てんじしつ から かってに もちだしちゃった…！ | You took it from the exhibition without asking…! |
-| 神話級 | Mythic |
-| **Stats:** 基本レア度 / 時代補正 / 最終レア度 / 保存度 / 汚れ / 破損 / DB段 | Base rarity / Era bonus / Final rarity / Preservation / Dirt / Damage / DB fallback stage |
-| **Damage:** 欠 / ひび / 摩耗 / なし | Chip / Crack / Wear / None |
-| **Categories:** 武器 / 祭具 / 生活用品 / 建築断片 / 碑文 / 機械部品 | Weapon / Ritual / Daily-use / Architecture fragment / Inscription / Machine part |
-
-Civilizations (`desert/ocean/mountain/machine/organic`), eras
-(`ancient/medieval/early_modern/modern/future`) and dirt types are shown by their English keys.
-The artifact **description** is atmospheric flavour text in the deliberately pompous, dubious
-style of the fictional publisher *"萬象書房" (Banshō Shobō, "est. 1890")* — an homage to the
-*Minmei Shobō* gag from the manga *Sakigake!! Otokojuku*. All blurbs are original generated text.
-
-## How it works (determinism)
+## How it works (for developers)
 
 ```
 QR bytes → normalize → SHA-256 (seed) → tagged sub-streams → attributes
                                                   ├ rarity (integer thresholds, float-free)
                                                   ├ civilization / era / category
                                                   ├ colour (HSV), dirt, damage, preservation
-                                                  └ era bonus (only if a real date is found)
+                                                  └ era bonus (only if the QR embeds a real date)
         → DB select (civ × era × category × rarity, 6-stage fallback)
         → compose image (base sprite → HSV → dirt → damage → preservation → background)
-        → flavour text
+        → flavour text (bilingual)
 ```
 
 Byte-for-byte reproducible. A TypeScript reference implementation is the language-neutral
-**oracle**; the Rust core must reproduce its golden vectors exactly:
+**oracle**; the Rust core reproduces its golden vectors exactly:
 
 ```
-TS reference  ≡  vectors/golden.json  ≡  Rust qrac-core  ≡  Swift (via FFI)
+TS reference  ≡  reference/vectors/golden.json  ≡  Rust qrac-core  ≡  Swift (via UniFFI)
 ```
 
-## Repository layout
+Design details live in **[docs/](docs/)** (00–08).
+
+### Repository layout
 
 ```
 docs/                 Design spec (00–08) + open-questions log
 reference/            TypeScript reference core (oracle) + golden vectors + tests
 rust/
   qrac-core/          Pure deterministic core (hash, normalize, rarity, timestamp,
-                      appearance, flavor, derive) — verified against golden.json
+                      appearance, flavor[bilingual], derive) — verified vs golden.json
   qrac-render/        I/O: SQLite base-artifact DB (rusqlite) + image compose (tiny-skia)
   qrac-ffi/           UniFFI boundary exposing the core to Swift/Kotlin
   qrac-assetgen/      Asset generator: base images + full-coverage DB + CI coverage gate
-apple/                macOS SwiftUI app (QrArtifactChronicle.app) + XCFramework packaging
+apple/                macOS SwiftUI app + XCFramework packaging (debug / release configs)
 ```
 
-## Build & run
+### Build & run
 
 ```bash
-# Rust core tests (determinism, distribution, independence, DB fallback, compose)
-cd rust && cargo test --workspace
-
-# TypeScript oracle (regenerate / verify golden vectors)
-cd reference && npm test
-
-# Generate assets (base images + artifacts.sqlite, with coverage gate)
-cd rust && cargo run -p qrac-assetgen -- dist
-
-# macOS app (builds the Rust core, packages an XCFramework, assembles the .app)
-cd apple && bash build-app.sh
-open QrArtifactChronicle.app   # unsigned: first launch may need right-click → Open
+cd rust && cargo test --workspace                 # Rust core tests
+cd reference && npm test                           # TypeScript oracle (Node ≥ 23.6)
+cd rust && cargo run -p qrac-assetgen -- dist      # generate assets (+ coverage gate)
+cd apple && bash build-app.sh                      # debug app  → QrArtifactChronicle.app
+APP_CONFIG=release bash build-app.sh               # release app → QrArtifactChronicleRelease.app
+open apple/QrArtifactChronicle.app                 # unsigned: first launch may need right-click → Open
 ```
 
-Requirements: Rust (stable), Node ≥ 23.6 (reference's native TS execution), Xcode / Swift 6.
+Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6.
 
-## Roadmap / TODO
+### Roadmap
 
-- [ ] **In-app English localization (i18n)** — the UI is Japanese-only for now.
-- [ ] **Replace UniFFI (MPL-2.0) with a hand-written C ABI FFI** for a fully permissive
-      dependency tree (only needed for a strict closed-source/commercial posture; MPL is fine
-      for the current MIT/OSS release).
+- [x] In-app localization (English / 日本語), flavour text included.
+- [ ] Photo-realistic artwork (real museum / dig-site / catalogue rendering; replace placeholders).
+- [ ] Real 6-layer compositing (dirt/damage PNG layers + blend modes) — currently procedural.
 - [ ] iOS & Android targets (multi-platform XCFramework; Kotlin bindings via cargo-ndk).
-- [ ] Replace procedural placeholder art with real artist assets (WebP); layout is swap-ready.
-- [ ] Real 6-layer compositing (dirt/damage PNG layers + blend modes); currently procedural.
-- [ ] Lightweight collection (regenerate from key) instead of storing rendered PNGs.
-- [ ] Code signing & notarization for distribution.
+- [ ] Replace UniFFI (MPL-2.0) with a hand-written C ABI for a fully permissive tree (only needed
+      for a strict closed-source posture; MPL is fine for this MIT/OSS release).
+- [ ] Lightweight collection (regenerate from key) and code signing / notarization.
+
+## Why this project exists
+
+An experiment in re-reading the most mundane digital objects — QR codes — as **archaeological
+relics of imaginary civilizations**. Deterministic generation makes each code a fixed point in a
+fictional history: the same scan always unearths the same lost artifact.
 
 ## License
 
 **MIT © 2026 suzuki-black** — see [LICENSE](LICENSE).
 Third-party components (all MIT-compatible; UniFFI is MPL-2.0, used unmodified) are listed in
-[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md). The flavour text is an homage to the *Minmei
+Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all blurbs are original.
 
 ---
 
 # 日本語
 
-> QRコードを読み取ると、架空の古代文明の遺物を「決定論的に」発掘するアプリ。
-> 同じQRからは必ず同じ遺物。有限のDBなのに無限に感じる設計です。
-> ※ 現在アプリ内UIは**日本語のみ**（英語化はロードマップ。上記に英訳glossaryあり）。
+**QRコードを読み取るだけで、架空文明の“唯一の遺物”が発掘される。同じQRなら、必ず同じ遺物。**
+
+日常で出会うQRコードを、架空の古代文明の遺物に変えて、自分だけの博物館に収集できます。
+
+> ⚠️ **プロトタイプ (v0.2.0)。** 決定論エンジンは完成・テスト済みですが、**画像は現状すべて
+> 手続き生成のプレースホルダ**です。下記の「写真風（博物館／発掘現場／図録）」は**設計目標**で
+> あって現状の見た目ではありません。上の画像は実エンジン出力（最終アートではない）です。
 
 ## これは何？
 
-現実のQRコードを読む → 内容をハッシュ化 → 架空の古代文明の遺物を生成します。レア度・文明・
-時代・カテゴリ・色・汚れ・破損、そして胡散臭い解説文まで、すべてQRから**決定論的**に決まります。
-発掘した遺物は「展示室」に集まります。
+ポスター・名刺・缶ジュース…どんなQRコードにカメラを向けても、架空の遺物を「発掘」します。
+文明・時代・カテゴリ・色・汚れ・破損、そして胡散臭い解説文まで、すべてQRの内容から**決定論的**
+に決まります。同じコードからは、いつでもどこでも必ず同じ遺物が出ます。
 
-- **同じQR → 必ず同じ遺物**（乱数なし・スキャン時刻にも依存しない）
-- **有限ベースDB × 無限合成**（色変え・汚れ/破損・個体差テキストで 10¹²通り超）
-- **優しいガチャ的レア度**（★1 ≈ 40%、★10 ≈ 0.01%）
-- **時代補正** — QR内容に実日付が含まれると、古いQRほど神話級 ★11〜★13 に到達
-- **オフライン** — 実行時にLLMもサーバも使わず、すべて事前生成・同梱
+### これは“バーコードバトラー”ではありません
+
+モンスター生成もバトルも育成もありません。**考古学 × 写真 × 図鑑** という独自ジャンルの、
+決定論的な**遺物**ジェネレータです。日常のQRが発掘現場に、コレクションが博物館になります。
+
+## コア機能
+
+- 🎲 **決定論** — 同じQR→必ず同じ遺物（乱数なし・時刻に依存しない）
+- 📴 **完全オフライン** — 実行時にサーバもLLMも使わない（事前生成・同梱）
+- 🖼️ **遺物画像をその場生成**（形・色・汚れ・破損・保存状態）— 二つと同じに感じない
+- 🏺 **汚れ・ひび・保存状態をリアルタイム合成**
+- 📜 **架空文明・架空時代**＋もったいぶった胡散臭い解説文
+- 🏛️ **展示室** — 自動保存、文字検索＋カテゴリ／レア度フィルタ
+- 🌐 **英日二言語** — 設定⚙️で即時切替（解説文も）
+- ✨ **優しいガチャ的レア度**（★1≈40%…★10≈0.01%）／神話級★11〜13は“現実に古い日付のQR”限定
+
+## なぜ「写真風」か（ビジョン）
+
+目標は、各遺物を**博物館級の写真**として見せること——同じ遺物を、ガラスケースの「博物館」、
+泥のついた「発掘現場」、清潔な「図録」の3スタイルで。汚れ・ひび・保存状態をその場で重ね、
+本当に地中から出土した実物のように感じさせます。*（本プロトタイプの描画は手続き生成の暫定版で、
+写真パイプラインはロードマップ：[docs/05](docs/05-image-pipeline.md)）*
+
+## 日常が発掘現場になる
+
+出会うQRすべてが発掘候補。集めて**展示室**を埋め、存在しなかった世界の考古アーカイブを作りましょう。
 
 ## 遊び方
 
-1. **📷 カメラで発掘** をタップ（デバッグ版では文字を手入力して「発掘」、または「ランダム」も可）。
-2. カメラをQRコードに向けると **自動で読み取り**（シャッター不要・リンク自動表示なし）。
+1. **📷 カメラで発掘**（デバッグ版では手入力や**ランダム**も可）
+2. QRにカメラを向けると**自動で読み取り**（シャッター不要・リンク自動表示なし）
 3. ファミコン風の発掘演出:
-   - **新規** → 女の子が掘り当て → **「しんはっけん！」** → 遺物を表示し展示室に保存。
-   - **発掘済み** → お師匠様に叱られる（「同じ遺物は2つとない＝展示室から持ち出しちゃダメ！」）。
-     遺物は表示されるが再登録はされない。
-4. 右上の **🏛 展示室** で発掘済みを閲覧。**文字検索＋カテゴリ／レア度フィルタ**。
-5. 遺物カードをタップで **詳細ページ**（画像・ステータス・解説文）。
-6. 神話級 ★11〜★13 は「現実に古い日付を含むQR」からのみ出現する到達目標。
+   - **新規** → 女の子が掘り当て → 「しんはっけん！」→ 表示＆保存
+   - **発掘済み** → お師匠様に叱られる（「同じ遺物は2つとない＝展示室から持ち出しちゃダメ！」）
+4. **🏛 展示室**で閲覧・検索・フィルタ（カテゴリ／レア度）
+5. カードをタップで**詳細**（画像・ステータス・解説文）
 
-> **カメラが読みにくい？** MacBook内蔵カメラは固定焦点でQRが苦手なことがあります。**iPhoneを連係
-> カメラ**として使うと解決します（Macの近くに置き・静止・ロック、スキャン画面のカメラメニューで選択。
-> 出なければ「カメラを再検索」）。外付けUSBカメラも可。内蔵で頑張る場合は 30〜50cm 離して大きく明るく。
+> **カメラのコツ（macOS）**: 内蔵カメラは固定焦点でQRが苦手。**iPhoneを連係カメラ**にすると快適
+> （近接・静止・ロック → カメラメニューで選択、出なければ「カメラを再検索」）。外付けカメラも可。
 
-## 仕組み（決定論）
+## 仕組み（開発者向け）
 
-```
-QRバイト列 → 正規化 → SHA-256(シード) → タグ別サブストリーム → 各属性
-                                              ├ レア度（整数しきい値・float非依存）
-                                              ├ 文明 / 時代 / カテゴリ
-                                              ├ 色(HSV) / 汚れ / 破損 / 保存状態
-                                              └ 時代補正（実日付が取れた時のみ）
-        → DB選択（文明×時代×カテゴリ×レア度、6段フォールバック）
-        → 画像合成（ベース画像 → HSV → 汚れ → 破損 → 保存状態 → 背景）
-        → 民明書房調の解説文
-```
-
-全工程がバイト単位で再現可能。TypeScript参照実装が**言語非依存のオラクル**で、Rustコアはその
-ゴールデンベクタを完全一致で再現します（`TS ≡ golden.json ≡ Rust ≡ Swift`）。
-
-## リポジトリ構成
-
-```
-docs/         設計仕様（00〜08）＋意思決定ログ
-reference/    TypeScript 参照コア（オラクル）＋ゴールデンベクタ＋テスト
-rust/qrac-core      純粋な決定論コア（hash/normalize/rarity/timestamp/appearance/flavor/derive）
-rust/qrac-render    I/O: ベース遺物DB(rusqlite) ＋ 画像合成(tiny-skia)
-rust/qrac-ffi       UniFFI境界（Swift/Kotlinへ公開）
-rust/qrac-assetgen  アセット生成（ベース画像＋全rarity充足DB＋カバレッジゲート）
-apple/        macOS SwiftUI アプリ＋XCFramework化
-```
-
-## ビルド & 実行
-
-```bash
-cd rust && cargo test --workspace                 # Rustコアのテスト
-cd reference && npm test                           # TSオラクル（Node 23.6+）
-cd rust && cargo run -p qrac-assetgen -- dist      # アセット生成
-cd apple && bash build-app.sh && open QrArtifactChronicle.app   # macOSアプリ
-```
-
-## ロードマップ / TODO
-
-- [ ] **アプリ内の英語化（i18n）** — 現状UIは日本語のみ
-- [ ] **UniFFI(MPL-2.0) → 手書き C ABI FFI 置換**（依存ツリーを完全に寛容化。商用クローズド時のみ必須）
-- [ ] iOS / Android 対応（マルチプラットフォーム XCFramework、cargo-ndk）
-- [ ] 手続き生成のプレースホルダ画像をアーティスト製アセット(WebP)に差し替え（配置は差替前提済み）
-- [ ] 実行時の本格6層合成（透過PNGレイヤー＋ブレンドモード。現状は手続き描画）
-- [ ] 収集データの軽量化（画像保存をやめキーから再生成）
-- [ ] 配布用のコード署名・公証
+詳細は **[docs/](docs/)**（00〜08）。`QRバイト→正規化→SHA-256→属性→DB選択(6段)→画像合成→解説文`
+の全工程がバイト単位で再現可能。TypeScript参照実装をオラクルとし、Rustコアがゴールデンベクタを
+完全一致で再現します（`TS ≡ golden.json ≡ Rust ≡ Swift`）。ビルドは英語セクションの Build & run 参照。
 
 ## ライセンス
 
-**MIT © 2026 suzuki-black** — [LICENSE](LICENSE) 参照。サードパーティ（すべてMIT互換、UniFFIは
-MPL-2.0で未改変利用）は [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) に記載。
-
-> 「民明書房」風の解説文は『魁!!男塾』へのオマージュです。出版社名・解説文はすべてオリジナルの生成テキストです。
+**MIT © 2026 suzuki-black**（[LICENSE](LICENSE)）。サードパーティは [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)
+（すべてMIT互換、UniFFIはMPL-2.0で未改変）。解説文は『魁!!男塾』民明書房ネタへのオマージュ（出版社名・本文はオリジナル）。

@@ -5,6 +5,7 @@ import SwiftUI
 struct DigModalView: View {
     let scolding: Bool
     let onDone: () -> Void
+    @EnvironmentObject var settings: Settings
     private let step = 0.16   // パラパラのコマ送り（≈6fps）
     @State private var showBanner = false
 
@@ -52,10 +53,12 @@ struct DigModalView: View {
             }
             .overlay(RoundedRectangle(cornerRadius: 2).stroke(.white, lineWidth: 4))
 
-            Text(scolding ? "めっ！ もちだしきんし！" : "はっくつ ちゅう…")
+            Text(scolding ? settings.t("めっ！ もちだしきんし！", "No! Don’t take it out!")
+                          : settings.t("はっくつ ちゅう…", "Excavating…"))
                 .font(.system(.headline, design: .monospaced)).bold()
                 .foregroundStyle(scolding ? .yellow : .white)
-            Text(scolding ? "おなじ いぶつは ２つと ない！" : "…ザクッ …ザクッ")
+            Text(scolding ? settings.t("おなじ いぶつは ２つと ない！", "No two artifacts are alike!")
+                          : settings.t("…ザクッ …ザクッ", "…dig …dig"))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.white.opacity(0.85)).multilineTextAlignment(.center)
         }
@@ -63,14 +66,17 @@ struct DigModalView: View {
 
     private var banner: some View {
         VStack(spacing: 12) {
-            Text(scolding ? "！ もちだし ！" : "✨ しんはっけん！ ✨")
-                .font(.system(size: 28, weight: .heavy, design: .monospaced))
+            Text(scolding ? settings.t("！ もちだし ！", "! TAKEN OUT !")
+                          : settings.t("✨ しんはっけん！ ✨", "✨ NEW FIND! ✨"))
+                .font(.system(size: 26, weight: .heavy, design: .monospaced))
                 .foregroundStyle(scolding ? .red : .yellow)
                 .shadow(color: .black, radius: 0, x: 2, y: 2)
                 .multilineTextAlignment(.center)
             Text(scolding
-                 ? "てんじしつ から かってに\nもちだしちゃった…！"
-                 : "あたらしい いぶつ を\nてに いれた！")
+                 ? settings.t("てんじしつ から かってに\nもちだしちゃった…！",
+                              "You took it from the\nexhibition without asking…!")
+                 : settings.t("あたらしい いぶつ を\nてに いれた！",
+                              "You got a new artifact!"))
                 .font(.system(.headline, design: .monospaced))
                 .foregroundStyle(.white).multilineTextAlignment(.center).lineSpacing(3)
         }

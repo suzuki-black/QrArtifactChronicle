@@ -982,6 +982,79 @@ public func FfiConverterTypeRenderedImage_lower(_ value: RenderedImage) -> RustB
     return FfiConverterTypeRenderedImage.lower(value)
 }
 
+// Note that we don't yet support `indirect` for enums.
+// See https://github.com/mozilla/uniffi-rs/issues/396 for further discussion.
+/**
+ * 解説文の言語。表示テキストのみに影響し、決定論（hash/属性）には無関係。
+ */
+
+public enum Lang {
+    
+    case ja
+    case en
+}
+
+
+#if compiler(>=6)
+extension Lang: Sendable {}
+#endif
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeLang: FfiConverterRustBuffer {
+    typealias SwiftType = Lang
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Lang {
+        let variant: Int32 = try readInt(&buf)
+        switch variant {
+        
+        case 1: return .ja
+        
+        case 2: return .en
+        
+        default: throw UniffiInternalError.unexpectedEnumCase
+        }
+    }
+
+    public static func write(_ value: Lang, into buf: inout [UInt8]) {
+        switch value {
+        
+        
+        case .ja:
+            writeInt(&buf, Int32(1))
+        
+        
+        case .en:
+            writeInt(&buf, Int32(2))
+        
+        }
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLang_lift(_ buf: RustBuffer) throws -> Lang {
+    return try FfiConverterTypeLang.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeLang_lower(_ value: Lang) -> RustBuffer {
+    return FfiConverterTypeLang.lower(value)
+}
+
+
+extension Lang: Equatable, Hashable {}
+
+
+
+
+
+
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
@@ -1036,23 +1109,36 @@ public func deriveQrWithYear(text: String, year: Int32?) -> Artifact  {
 })
 }
 /**
- * QR文字列 → 合成画像（derive → DB選択 → 6層合成 → PNG）。
+ * 解説文のみを生成（画像なし・軽量）。言語切替時の再生成や展示室表示に使う。
  */
-public func renderQr(text: String) -> RenderedImage  {
+public func describeQr(text: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_describe_qr(
+        FfiConverterString.lower(text),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+/**
+ * QR文字列 → 合成画像（derive → DB選択 → 6層合成 → PNG）。lang は解説文の言語。
+ */
+public func renderQr(text: String, lang: Lang) -> RenderedImage  {
     return try!  FfiConverterTypeRenderedImage_lift(try! rustCall() {
     uniffi_qrac_ffi_fn_func_render_qr(
-        FfiConverterString.lower(text),$0
+        FfiConverterString.lower(text),
+        FfiConverterTypeLang_lower(lang),$0
     )
 })
 }
 /**
  * 年指定つきレンダ（デバッグ/バランス確認用。None=年代取得不可として +0）。
  */
-public func renderQrWithYear(text: String, year: Int32?) -> RenderedImage  {
+public func renderQrWithYear(text: String, year: Int32?, lang: Lang) -> RenderedImage  {
     return try!  FfiConverterTypeRenderedImage_lift(try! rustCall() {
     uniffi_qrac_ffi_fn_func_render_qr_with_year(
         FfiConverterString.lower(text),
-        FfiConverterOptionInt32.lower(year),$0
+        FfiConverterOptionInt32.lower(year),
+        FfiConverterTypeLang_lower(lang),$0
     )
 })
 }
@@ -1081,10 +1167,13 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qrac_ffi_checksum_func_derive_qr_with_year() != 25988) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_qrac_ffi_checksum_func_render_qr() != 42129) {
+    if (uniffi_qrac_ffi_checksum_func_describe_qr() != 59936) {
         return InitializationResult.apiChecksumMismatch
     }
-    if (uniffi_qrac_ffi_checksum_func_render_qr_with_year() != 21587) {
+    if (uniffi_qrac_ffi_checksum_func_render_qr() != 8441) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_render_qr_with_year() != 28788) {
         return InitializationResult.apiChecksumMismatch
     }
 

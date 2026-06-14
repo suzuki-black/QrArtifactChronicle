@@ -116,11 +116,14 @@ qrac-assetgen/  （開発ツール。ベース画像＋全rarity充足DB＋カ�
 
 ```
 // #[uniffi::export]
+enum Lang { Ja, En }                                          // 解説文の言語（表示専用・決定論に無関係）
+
 fn configure_assets(dir: String)                              // ベース画像のディレクトリ設定
 fn derive_qr(text: String) -> Artifact                       // 属性（年は内容から自動抽出）
 fn derive_qr_with_year(text: String, year: Int32?) -> Artifact
-fn render_qr(text: String) -> RenderedImage                  // derive→DB選択→合成→PNG
-fn render_qr_with_year(text: String, year: Int32?) -> RenderedImage
+fn render_qr(text: String, lang: Lang) -> RenderedImage      // derive→DB選択→合成→PNG＋解説
+fn render_qr_with_year(text: String, year: Int32?, lang: Lang) -> RenderedImage
+fn describe_qr(text: String, lang: Lang) -> String           // 解説文のみ（言語切替時の再生成）
 
 // #[derive(uniffi::Record)]
 struct Artifact { artifactHash, baseRarity, eraBonus, finalRarity, isMythic,
@@ -129,7 +132,9 @@ struct Artifact { artifactHash, baseRarity, eraBonus, finalRarity, isMythic,
 struct RenderedImage { width, height, png: bytes, baseName, matchedStage, description }
 ```
 
-- `derive_qr*` は純粋コアのみ。`render_qr*` は DB選択(qrac-render) ＋ 合成。
+- `derive_qr*` は純粋コアのみ。`render_qr*` は DB選択(qrac-render) ＋ 合成 ＋ 解説文(`lang`)。
+- `Lang` は解説文の言語のみを切り替える。属性・ハッシュ・決定論には影響しない（docs/00 0.4.1 と同じ非対称）。
+- 表示名はSwiftが civ/era/category＋★ から多言語生成（`baseName` は参考値）。
 - 収集の永続化（collect/list）はFFIに持たず **Swift側 GameModel**（collection.json）で実施。
 - 当初案にあった `collect` / `list_collection` / `build_artifact` / `RgbaImage(rgba)` / `Style` は不採用。
 
@@ -236,7 +241,10 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 
 プロトタイプのSwiftUIアプリ（縦長スマホUIをmacOS上で表示）。決定論は全てRust側、Swiftは入力・表示・収集のみ。
 
-- **画面遷移**（`ContentView` の `Page`）: メイン / 展示室 / 詳細 / カメラ。phoneフレーム内でスライド遷移。
+- **画面遷移**（`ContentView` の `Page`）: メイン / 展示室 / 詳細 / カメラ / 設定。phoneフレーム内でスライド遷移。
+- **多言語（i18n）**（`Localization.swift` / `SettingsView.swift`）: 英語/日本語/システム追従を**設定⚙️**で即時切替・
+  永続化（`Settings: ObservableObject`、`@AppStorage`）。UI文言・カテゴリ等の語彙・遺物表示名（`artifactName`）・
+  **解説文（`describe_qr(lang)` で再生成）**まで全て言語連動。明色テーマ固定（`preferredColorScheme(.light)`）。
 - **カメラQRスキャナ**（`Scanner.swift` / `CameraScanView.swift`）: **Vision `VNDetectBarcodesRequest`** で
   ライブ検出（撮影不要・リンク自動表示なし）。複数カメラの一覧/切替（内蔵/iPhone連係/外付け）、接続/切断の
   自動更新。`AVCaptureMetadataOutput` はiPhone連係で配信されない事例があり Vision方式を採用。**リリースの主入力**。
@@ -248,4 +256,6 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 - **遺物詳細**（`ArtifactDetailView.swift`）: メイン類似だが操作系なし（戻るのみ）。
 - **ゲームバランス確認**（`BalanceView.swift`）: 固定シードで大量サンプリング→分布を可視化（デバッグ）。
 - **デバッグ専用UI**（`#if DEBUG`）: 手入力/カメラ切替・プリセット・ランダム・年代補正・分布・展示室リセット。
-  リリースでは除外（手入力欄は出ず、カメラ発掘のみ）。`build-app.sh` は debug ビルド（開発用）。
+  リリースでは除外（手入力欄は出ず、カメラ発掘のみ）。文字列スキャンで除外を検証済み。
+- **ビルド構成**: `bash build-app.sh`＝debug（`QrArtifactChronicle.app`、デバッグUIあり）。
+  `APP_CONFIG=release bash build-app.sh`＝release（`QrArtifactChronicleRelease.app`、`#if DEBUG`除外・別バンドルID）。

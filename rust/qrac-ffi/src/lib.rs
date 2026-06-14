@@ -117,7 +117,23 @@ pub struct RenderedImage {
     pub description: String,
 }
 
-fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes) -> RenderedImage {
+/// 解説文の言語。表示テキストのみに影響し、決定論（hash/属性）には無関係。
+#[derive(uniffi::Enum)]
+pub enum Lang {
+    Ja,
+    En,
+}
+
+impl From<Lang> for qrac_core::Lang {
+    fn from(l: Lang) -> Self {
+        match l {
+            Lang::Ja => qrac_core::Lang::Ja,
+            Lang::En => qrac_core::Lang::En,
+        }
+    }
+}
+
+fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes, lang: Lang) -> RenderedImage {
     let seed = make_seed(&normalize_key(text.as_bytes()));
     let base = {
         let db = db().lock().unwrap();
@@ -136,7 +152,7 @@ fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes) -> RenderedImage
         .as_ref()
         .and_then(|d| load_base_png(d, base.image_set_id, "museum"));
     let png = render_png(attr, &base, sprite.as_deref());
-    let description = qrac_core::flavor::describe(&seed, attr);
+    let description = qrac_core::flavor::describe(&seed, attr, lang.into());
     RenderedImage {
         width: CANVAS_W,
         height: CANVAS_H,
@@ -147,16 +163,24 @@ fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes) -> RenderedImage
     }
 }
 
-/// QR文字列 → 合成画像（derive → DB選択 → 6層合成 → PNG）。
+/// QR文字列 → 合成画像（derive → DB選択 → 6層合成 → PNG）。lang は解説文の言語。
 #[uniffi::export]
-pub fn render_qr(text: String) -> RenderedImage {
+pub fn render_qr(text: String, lang: Lang) -> RenderedImage {
     let attr = derive_from_string(&text, None);
-    render_impl(&text, &attr)
+    render_impl(&text, &attr, lang)
 }
 
 /// 年指定つきレンダ（デバッグ/バランス確認用。None=年代取得不可として +0）。
 #[uniffi::export]
-pub fn render_qr_with_year(text: String, year: Option<i32>) -> RenderedImage {
+pub fn render_qr_with_year(text: String, year: Option<i32>, lang: Lang) -> RenderedImage {
     let attr = derive_from_string(&text, Some(year));
-    render_impl(&text, &attr)
+    render_impl(&text, &attr, lang)
+}
+
+/// 解説文のみを生成（画像なし・軽量）。言語切替時の再生成や展示室表示に使う。
+#[uniffi::export]
+pub fn describe_qr(text: String, lang: Lang) -> String {
+    let attr = derive_from_string(&text, None);
+    let seed = make_seed(&normalize_key(text.as_bytes()));
+    qrac_core::flavor::describe(&seed, &attr, lang.into())
 }

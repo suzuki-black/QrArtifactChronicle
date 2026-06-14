@@ -6,9 +6,10 @@ private let labelColor = Color(white: 0.38)   // 読みやすいラベル色
 /// スマホ縦長前提のゲーム画面（macOS 上で phone フレーム表示）。
 /// 上: 遺物カード（スクロール）／下: 操作バー（常に表示）。
 struct ContentView: View {
-    enum Page { case main, exhibition, detail, camera }
+    enum Page { case main, exhibition, detail, camera, settings }
     enum InputMode { case manual, camera }
     @StateObject private var model = GameModel()
+    @StateObject private var settings = Settings()
     @State private var showBalance = false
     @State private var page: Page = .main
     @State private var selected: GameModel.Collected?
@@ -26,55 +27,55 @@ struct ContentView: View {
                            startPoint: .top, endPoint: .bottom).ignoresSafeArea()
 
             ZStack {
-                if page == .main {
+                switch page {
+                case .main:
                     mainPage.transition(.move(edge: .leading))
-                } else if page == .exhibition {
+                case .exhibition:
                     ExhibitionView(
                         model: model,
-                        onBack: { withAnimation(.easeInOut(duration: 0.25)) { page = .main } },
-                        onSelect: { c in
-                            selected = c
-                            withAnimation(.easeInOut(duration: 0.25)) { page = .detail }
-                        },
-                        search: $exSearch,
-                        category: $exCategory,
-                        rarity: $exRarity)
+                        onBack: { go(.main) },
+                        onSelect: { c in selected = c; go(.detail) },
+                        search: $exSearch, category: $exCategory, rarity: $exRarity)
                         .transition(.move(edge: .trailing))
-                } else if page == .detail, let sel = selected {
-                    ArtifactDetailView(item: sel,
-                        onBack: { withAnimation(.easeInOut(duration: 0.25)) { page = .exhibition } })
-                        .transition(.move(edge: .trailing))
-                } else if page == .camera {
+                case .detail:
+                    if let sel = selected {
+                        ArtifactDetailView(model: model, item: sel, onBack: { go(.exhibition) })
+                            .transition(.move(edge: .trailing))
+                    }
+                case .camera:
                     CameraScanView(
-                        onScan: { s in
-                            model.input = s
-                            withAnimation(.easeInOut(duration: 0.25)) { page = .main }
-                            model.excavate()                // スキャン文字列で発掘→アニメ→遺物
-                        },
-                        onCancel: { withAnimation(.easeInOut(duration: 0.25)) { page = .main } })
+                        onScan: { s in model.input = s; go(.main); model.excavate() },
+                        onCancel: { go(.main) })
+                        .transition(.move(edge: .trailing))
+                case .settings:
+                    SettingsView(settings: settings, onBack: { go(.main) })
                         .transition(.move(edge: .trailing))
                 }
             }
             .frame(width: phoneWidth)
-            .frame(maxHeight: .infinity)                   // ウィンドウ高さに追従
+            .frame(maxHeight: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 34))
             .overlay(RoundedRectangle(cornerRadius: 34).strokeBorder(.black.opacity(0.85), lineWidth: 10))
             .shadow(color: .black.opacity(0.5), radius: 20, y: 8)
             .padding(.vertical, 18)
 
-            // 発掘演出モーダル（ファミコン風パラパラ・約3秒）
             if model.phase != .idle {
-                DigModalView(scolding: model.phase == .scolding) {
-                    model.finishDigAnimation()
-                }
-                .transition(.opacity)
+                DigModalView(scolding: model.phase == .scolding) { model.finishDigAnimation() }
+                    .transition(.opacity)
             }
         }
+        .environmentObject(settings)
         .animation(.easeInOut(duration: 0.15), value: model.phase)
         .frame(minWidth: phoneWidth + 40, minHeight: 540)
-        .onAppear { model.configureAssetsIfBundled() }   // 初期は何も表示しない
-        .sheet(isPresented: $showBalance) { BalanceView(model: model) }
+        .onAppear { model.configureAssetsIfBundled(); model.lang = settings.ffiLang() }
+        .onChange(of: settings.language) { _ in
+            model.lang = settings.ffiLang()
+            model.relocalize()
+        }
+        .sheet(isPresented: $showBalance) { BalanceView(model: model, settings: settings) }
     }
+
+    private func go(_ p: Page) { withAnimation(.easeInOut(duration: 0.25)) { page = p } }
 
     private var mainPage: some View {
         VStack(spacing: 0) {
@@ -95,12 +96,14 @@ struct ContentView: View {
         VStack(spacing: 12) {
             Image(systemName: "magnifyingglass.circle")
                 .font(.system(size: 72)).foregroundStyle(.brown.opacity(0.45))
-            Text("まだ何も発掘していません").font(.headline).foregroundStyle(.secondary)
+            Text(settings.t("まだ何も発掘していません", "Nothing excavated yet"))
+                .font(.headline).foregroundStyle(.secondary)
             #if DEBUG
-            Text("入力欄に文字列を入れて「発掘」してみよう")
+            Text(settings.t("入力欄に文字列を入れて「発掘」してみよう",
+                            "Type some text and tap Excavate"))
                 .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
             #else
-            Text("QRコードを読み取って発掘しよう")
+            Text(settings.t("QRコードを読み取って発掘しよう", "Scan a QR code to excavate"))
                 .font(.caption).foregroundStyle(.secondary)
             #endif
         }
@@ -110,12 +113,17 @@ struct ContentView: View {
     // MARK: Header
     private var header: some View {
         HStack(spacing: 8) {
-            Text("🏺 QR考古学").font(.title2.bold())
-            Spacer()
-            Button { withAnimation(.easeInOut(duration: 0.25)) { page = .exhibition } } label: {
-                Label("展示室", systemImage: "building.columns.fill").font(.caption.bold())
-            }
-            .buttonStyle(.borderedProminent).tint(.brown).controlSize(.small)
+            Text(settings.t("🏺 QR考古学", "🏺 QR Archaeology"))
+                .font(.title2.bold())
+                .lineLimit(1).minimumScaleFactor(0.6).layoutPriority(1)
+            Spacer(minLength: 4)
+            Button { go(.exhibition) } label: {
+                Label(settings.t("展示室", "Exhibition"), systemImage: "building.columns.fill")
+                    .font(.caption.bold())
+            }.buttonStyle(.borderedProminent).tint(.brown).controlSize(.small)
+            Button { go(.settings) } label: {
+                Image(systemName: "gearshape.fill")
+            }.buttonStyle(.bordered).controlSize(.small)
             #if DEBUG
             Text("DEBUG").font(.caption2.bold())
                 .padding(.horizontal, 8).padding(.vertical, 3)
@@ -126,7 +134,7 @@ struct ContentView: View {
         .background(Color(red: 0.91, green: 0.87, blue: 0.79))
     }
 
-    // MARK: 遺物カード（スクロール領域）
+    // MARK: 遺物カード
     private var artifactCard: some View {
         VStack(spacing: 12) {
             ZStack {
@@ -145,15 +153,18 @@ struct ContentView: View {
                         .foregroundStyle(rarityColor(Int(a.finalRarity)))
                         .lineLimit(1).minimumScaleFactor(0.5)
                     if a.isMythic {
-                        Text("神話級").font(.caption.bold())
+                        Text(settings.mythicLabel).font(.caption.bold())
                             .padding(.horizontal, 6).padding(.vertical, 2)
                             .background(Color.pink.opacity(0.2)).foregroundStyle(.pink).clipShape(Capsule())
                     }
                 }
-                Text(model.baseName).font(.headline).foregroundStyle(.black)
-                    .multilineTextAlignment(.center)
+                Text(settings.artifactName(civ: a.civ, era: a.era, category: a.category,
+                                           rarity: Int(a.finalRarity)))
+                    .font(.headline).foregroundStyle(.black).multilineTextAlignment(.center)
                 HStack(spacing: 6) {
-                    chip(a.civ, .brown); chip(a.era, .indigo); chip(a.category, .teal)
+                    chip(settings.civName(a.civ), .brown)
+                    chip(settings.eraName(a.era), .indigo)
+                    chip(settings.categoryName(a.category), .teal)
                 }
                 statGrid(a)
                 if !model.descriptionText.isEmpty { bookExcerpt }
@@ -164,19 +175,16 @@ struct ContentView: View {
         .shadow(color: .black.opacity(0.08), radius: 6, y: 3)
     }
 
-    // 民明書房調の解説（「詳説 世界の遺物」抜粋の体裁）
     private var bookExcerpt: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "book.closed.fill").foregroundStyle(.brown)
-                Text("詳説 世界の遺物").font(.subheadline.bold()).foregroundStyle(.brown)
+                Text(settings.bookTitle).font(.subheadline.bold()).foregroundStyle(.brown)
             }
             Text(model.descriptionText)
-                .font(.callout)
-                .foregroundStyle(.black.opacity(0.88))
-                .fixedSize(horizontal: false, vertical: true)
-                .lineSpacing(3)
-            Text("萬象書房 発行　1890年刊版より抜粋")
+                .font(.callout).foregroundStyle(.black.opacity(0.88))
+                .fixedSize(horizontal: false, vertical: true).lineSpacing(3)
+            Text(settings.bookFooter)
                 .font(.caption2).foregroundStyle(labelColor)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -188,44 +196,45 @@ struct ContentView: View {
 
     private func statGrid(_ a: Artifact) -> some View {
         let cols = [GridItem(.flexible()), GridItem(.flexible())]
+        let stageVal = model.stage == 7 ? "GLOBAL" : settings.t("段\(model.stage)", "stage \(model.stage)")
         return LazyVGrid(columns: cols, spacing: 6) {
-            stat("基本レア度", "★\(a.baseRarity)")
-            stat("時代補正", "+\(a.eraBonus)")
-            stat("最終レア度", "★\(a.finalRarity)")
-            stat("保存度", "\(Int(a.preservationScore * 100))%")
-            stat("汚れ", a.dirtLayerId)
-            stat("破損", damageText(a.damage))
-            stat("DB段", model.stage == 7 ? "GLOBAL" : "段\(model.stage)")
+            stat(settings.t("基本レア度", "Base rarity"), "★\(a.baseRarity)")
+            stat(settings.t("時代補正", "Era bonus"), "+\(a.eraBonus)")
+            stat(settings.t("最終レア度", "Final rarity"), "★\(a.finalRarity)")
+            stat(settings.t("保存度", "Preservation"), "\(Int(a.preservationScore * 100))%")
+            stat(settings.t("汚れ", "Dirt"), settings.dirtName(a.dirtLayerId))
+            stat(settings.t("破損", "Damage"),
+                 settings.damageText(chip: a.damage.chip, crack: a.damage.crack, wear: a.damage.wear))
+            stat(settings.t("DB段", "DB stage"), stageVal)
             stat("hash", String(a.artifactHash.prefix(8)))
         }
         .font(.caption)
     }
 
-    // MARK: 操作バー（常に表示）
+    // MARK: 操作バー
     // ⚠️ 手入力・ランダム等のデバッグ機能はリリースビルドでは #if DEBUG により除外される。
     private var controlBar: some View {
         VStack(spacing: 8) {
             #if DEBUG
-            // 入力方法の切替（デバッグのみ）。ラベル付き＋アイコンで分かりやすく。
             HStack(spacing: 8) {
-                Text("入力方法").font(.caption.bold()).foregroundStyle(labelColor)
-                Picker("入力方法", selection: $inputMode) {
-                    Label("手動", systemImage: "keyboard").tag(InputMode.manual)
-                    Label("カメラ", systemImage: "camera.viewfinder").tag(InputMode.camera)
-                }.pickerStyle(.segmented).labelStyle(.titleAndIcon)
+                Text(settings.t("入力方法", "Input")).font(.caption.bold()).foregroundStyle(labelColor)
+                Picker("", selection: $inputMode) {
+                    Label(settings.t("手動", "Manual"), systemImage: "keyboard").tag(InputMode.manual)
+                    Label(settings.t("カメラ", "Camera"), systemImage: "camera.viewfinder").tag(InputMode.camera)
+                }.pickerStyle(.segmented).labelStyle(.titleAndIcon).labelsHidden()
             }
-
-            // 入力エリア（固定高さ：トグルで下の行がズレないように）
             ZStack {
                 if inputMode == .manual {
                     VStack(spacing: 8) {
                         HStack(spacing: 6) {
                             Image(systemName: "keyboard").foregroundStyle(labelColor)
-                            TextField("任意の文字列 / URL を手入力", text: $model.input)
+                            TextField(settings.t("任意の文字列 / URL を手入力", "Enter any text / URL"),
+                                      text: $model.input)
                                 .textFieldStyle(.roundedBorder).onSubmit { model.dig() }
                         }
                         Button { model.excavate() } label: {
-                            Label("発掘", systemImage: "hammer.fill").frame(maxWidth: .infinity)
+                            Label(settings.t("発掘", "Excavate"), systemImage: "hammer.fill")
+                                .frame(maxWidth: .infinity)
                         }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.large)
                             .disabled(!model.canExcavate)
                         presetRow
@@ -234,45 +243,44 @@ struct ContentView: View {
                 } else {
                     VStack(spacing: 8) {
                         Button { openCamera() } label: {
-                            Label("カメラで発掘", systemImage: "camera.viewfinder").frame(maxWidth: .infinity)
+                            Label(settings.t("カメラで発掘", "Excavate with camera"),
+                                  systemImage: "camera.viewfinder").frame(maxWidth: .infinity)
                         }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.large)
-                        Text("QRコードをかざすと自動で読み取ります")
+                        Text(settings.t("QRコードをかざすと自動で読み取ります", "Hold up a QR code to scan automatically"))
                             .font(.caption).foregroundStyle(labelColor)
                     }
                 }
             }
             .frame(height: 132)
-
             Divider().padding(.vertical, 1)
-
-            // デバッグ共通ツール
             HStack(spacing: 8) {
                 Button { model.randomExcavate() } label: {
-                    Label("ランダム", systemImage: "dice.fill").frame(maxWidth: .infinity)
+                    Label(settings.t("ランダム", "Random"), systemImage: "dice.fill").frame(maxWidth: .infinity)
                 }.buttonStyle(.borderedProminent).tint(.brown)
                 Button { showBalance = true } label: {
-                    Label("分布", systemImage: "chart.bar.fill").frame(maxWidth: .infinity)
-                }.buttonStyle(.borderedProminent).tint(.teal).help("ゲームバランス確認")
+                    Label(settings.t("分布", "Stats"), systemImage: "chart.bar.fill").frame(maxWidth: .infinity)
+                }.buttonStyle(.borderedProminent).tint(.teal).help(settings.t("ゲームバランス確認", "Game balance"))
             }
             HStack(spacing: 8) {
-                Toggle("年代", isOn: $model.useYear)
+                Toggle(settings.t("年代", "Era"), isOn: $model.useYear)
                     .toggleStyle(.switch).fixedSize()
                     .onChange(of: model.useYear) { _ in model.dig() }
                 if model.useYear {
-                    Stepper("\(model.year)年", value: $model.year, in: 1900...2099)
-                        .onChange(of: model.year) { _ in model.dig() }
-                        .font(.callout)
+                    Stepper(settings.t("\(model.year)年", "\(model.year)"), value: $model.year, in: 1900...2099)
+                        .onChange(of: model.year) { _ in model.dig() }.font(.callout)
                 } else {
-                    Text("（古いほど高レア・神話級）").font(.caption).foregroundStyle(labelColor)
+                    Text(settings.t("（古いほど高レア・神話級）", "(older = rarer / mythic)"))
+                        .font(.caption).foregroundStyle(labelColor)
                 }
                 Spacer()
             }
             #else
-            // リリース: 手入力は出さず、カメラ発掘のみ。
+            // リリース: カメラ発掘のみ。
             Button { openCamera() } label: {
-                Label("カメラで発掘", systemImage: "camera.viewfinder").frame(maxWidth: .infinity)
+                Label(settings.t("カメラで発掘", "Excavate with camera"), systemImage: "camera.viewfinder")
+                    .frame(maxWidth: .infinity)
             }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.large)
-            Text("QRコードを読み取って遺物を発掘します")
+            Text(settings.t("QRコードを読み取って遺物を発掘します", "Scan a QR code to excavate an artifact"))
                 .font(.caption).foregroundStyle(labelColor)
             #endif
         }
@@ -282,14 +290,14 @@ struct ContentView: View {
     }
 
     private func openCamera() {
-        model.input = ""                                   // 入力欄を初期化してからカメラへ
-        withAnimation(.easeInOut(duration: 0.25)) { page = .camera }
+        model.input = ""
+        go(.camera)
     }
 
     private var presetRow: some View {
         let presets: [(String, String)] = [
             ("URL", "https://example.com/welcome"),
-            ("和文", "古代の遺物QRコード"),
+            (settings.t("和文", "JP text"), "古代の遺物QRコード"),
             ("vCard2014", "BEGIN:VCARD\nREV:2014-03-10T00:00:00Z\nEND:VCARD"),
             ("ISO1985", "log 1985-06-15 backup"),
         ]
@@ -303,7 +311,6 @@ struct ContentView: View {
         }
     }
 
-    // MARK: helpers
     private func chip(_ text: String, _ color: Color) -> some View {
         Text(text).font(.caption.bold())
             .padding(.horizontal, 8).padding(.vertical, 3)
@@ -321,7 +328,3 @@ struct ContentView: View {
 }
 
 func stars(_ n: UInt32) -> String { String(repeating: "★", count: Int(n)) }
-func damageText(_ d: Damage) -> String {
-    let parts = [d.chip ? "欠" : nil, d.crack ? "ひび" : nil, d.wear ? "摩耗" : nil].compactMap { $0 }
-    return parts.isEmpty ? "なし" : parts.joined(separator: "/")
-}

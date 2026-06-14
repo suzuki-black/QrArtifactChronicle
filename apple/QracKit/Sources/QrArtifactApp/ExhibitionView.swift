@@ -1,12 +1,11 @@
 import SwiftUI
 
 /// 展示室ページ: 発掘済みアーティファクトの一覧。カテゴリ別フィルタ＋文字検索。
-/// （ダイアログではなくページ遷移。スマホUIに合わせる）
 struct ExhibitionView: View {
     @ObservedObject var model: GameModel
+    @EnvironmentObject var settings: Settings
     let onBack: () -> Void
     let onSelect: (GameModel.Collected) -> Void
-    // 検索条件は親(ContentView)が保持。詳細遷移→戻りで初期化されないように。
     @Binding var search: String
     @Binding var category: String?
     @Binding var rarity: Int?
@@ -15,16 +14,25 @@ struct ExhibitionView: View {
     private let cats = ["weapon", "ritual", "daily", "architecture", "inscription", "machine_part"]
     private let cols = [GridItem(.adaptive(minimum: 150), spacing: 10)]
 
-    // コレクションに実在するレア度のみ（空チップを並べない）
     private var presentRarities: [Int] {
         Array(Set(model.collected.map(\.finalRarity))).sorted(by: >)
+    }
+
+    /// 表示言語に応じた検索対象（名称・キー・両表記）。
+    private func matches(_ c: GameModel.Collected) -> Bool {
+        if search.isEmpty { return true }
+        let name = settings.artifactName(civ: c.civ, era: c.era, category: c.category, rarity: c.finalRarity)
+        let hay = [name, c.civ, c.era, c.category,
+                   settings.civName(c.civ), settings.eraName(c.era), settings.categoryName(c.category)]
+            .joined(separator: " ")
+        return hay.localizedCaseInsensitiveContains(search)
     }
 
     private var filtered: [GameModel.Collected] {
         model.collected.filter { c in
             (category == nil || c.category == category)
                 && (rarity == nil || c.finalRarity == rarity)
-                && (search.isEmpty || c.haystack.localizedCaseInsensitiveContains(search))
+                && matches(c)
         }
         .sorted { $0.finalRarity > $1.finalRarity }
     }
@@ -33,20 +41,18 @@ struct ExhibitionView: View {
         VStack(spacing: 0) {
             header
             VStack(spacing: 10) {
-                TextField("名称・文明・解説などで検索", text: $search)
+                TextField(settings.t("名称・文明などで検索", "Search by name, civ…"), text: $search)
                     .textFieldStyle(.roundedBorder)
 
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        catChip("すべて", key: nil)
-                        ForEach(cats, id: \.self) { catChip(categoryJP($0), key: $0) }
+                        catChip(settings.t("すべて", "All"), key: nil)
+                        ForEach(cats, id: \.self) { catChip(settings.categoryName($0), key: $0) }
                     }
                 }
-
-                // レア度フィルタ（存在するレア度のみ）
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        rarityChip("★すべて", value: nil)
+                        rarityChip(settings.t("★すべて", "★All"), value: nil)
                         ForEach(presentRarities, id: \.self) { rarityChip("★\($0)", value: $0) }
                     }
                 }
@@ -54,11 +60,14 @@ struct ExhibitionView: View {
                 if filtered.isEmpty {
                     Spacer()
                     VStack(spacing: 6) {
-                        Text(model.collected.isEmpty ? "まだ何も発掘していません" : "該当する遺物がありません")
+                        Text(model.collected.isEmpty
+                             ? settings.t("まだ何も発掘していません", "Nothing excavated yet")
+                             : settings.t("該当する遺物がありません", "No matching artifacts"))
                             .foregroundStyle(.secondary)
                         if model.collected.isEmpty {
-                            Text("「発掘」で遺物を見つけると ここに並びます")
-                                .font(.caption).foregroundStyle(.secondary)
+                            Text(settings.t("「発掘」で遺物を見つけると ここに並びます",
+                                            "Artifacts you excavate will appear here"))
+                                .font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                         }
                     }
                     Spacer()
@@ -80,18 +89,20 @@ struct ExhibitionView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Button { onBack() } label: {
-                Label("もどる", systemImage: "chevron.left").font(.callout.bold())
+                Label(settings.t("もどる", "Back"), systemImage: "chevron.left").font(.callout.bold())
             }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.small)
-            Text("🏛 展示室").font(.title3.bold())
-            Text("\(model.collected.count)点").font(.caption).foregroundStyle(.secondary)
+            Text(settings.t("🏛 展示室", "🏛 Exhibition")).font(.title3.bold())
+            Text(settings.t("\(model.collected.count)点", "\(model.collected.count)"))
+                .font(.caption).foregroundStyle(.secondary)
             Spacer()
             #if DEBUG
             Button(role: .destructive) { confirmReset = true } label: {
-                Label("リセット", systemImage: "trash").font(.caption)
+                Label(settings.t("リセット", "Reset"), systemImage: "trash").font(.caption)
             }.buttonStyle(.bordered).tint(.red)
-            .confirmationDialog("展示室をすべてリセットしますか？", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("リセットする", role: .destructive) { model.resetCollection() }
-                Button("やめる", role: .cancel) {}
+            .confirmationDialog(settings.t("展示室をすべてリセットしますか？", "Reset the whole exhibition?"),
+                                isPresented: $confirmReset, titleVisibility: .visible) {
+                Button(settings.t("リセットする", "Reset"), role: .destructive) { model.resetCollection() }
+                Button(settings.t("やめる", "Cancel"), role: .cancel) {}
             }
             #endif
         }
@@ -100,19 +111,15 @@ struct ExhibitionView: View {
     }
 
     private func catChip(_ label: String, key: String?) -> some View {
-        let on = category == key
-        return Button(label) { category = key }
-            .font(.caption)
-            .buttonStyle(.bordered)
-            .tint(on ? .accentColor : .gray)
+        Button(label) { category = key }
+            .font(.caption).buttonStyle(.bordered)
+            .tint(category == key ? .accentColor : .gray)
     }
 
     private func rarityChip(_ label: String, value: Int?) -> some View {
-        let on = rarity == value
-        return Button(label) { rarity = value }
-            .font(.caption)
-            .buttonStyle(.bordered)
-            .tint(on ? (value.map { rarityColor($0) } ?? .accentColor) : .gray)
+        Button(label) { rarity = value }
+            .font(.caption).buttonStyle(.bordered)
+            .tint(rarity == value ? (value.map { rarityColor($0) } ?? .accentColor) : .gray)
     }
 
     private func card(_ c: GameModel.Collected) -> some View {
@@ -131,11 +138,11 @@ struct ExhibitionView: View {
                 Text(String(repeating: "★", count: c.finalRarity))
                     .font(.caption2).foregroundStyle(rarityColor(c.finalRarity))
                     .lineLimit(1).minimumScaleFactor(0.5)
-                // 名称（しっかり表示）
-                Text(c.name).font(.caption.bold()).foregroundStyle(.black)
+                Text(settings.artifactName(civ: c.civ, era: c.era, category: c.category, rarity: c.finalRarity))
+                    .font(.caption.bold()).foregroundStyle(.black)
                     .lineLimit(2).multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, minHeight: 30, alignment: .top)
-                Text(categoryJP(c.category)).font(.system(size: 10))
+                Text(settings.categoryName(c.category)).font(.system(size: 10))
                     .foregroundStyle(.secondary)
             }
             .padding(8)
@@ -144,17 +151,5 @@ struct ExhibitionView: View {
             .overlay(c.isMythic ? RoundedRectangle(cornerRadius: 10).strokeBorder(.pink, lineWidth: 2) : nil)
         }
         .buttonStyle(.plain)
-    }
-}
-
-func categoryJP(_ key: String) -> String {
-    switch key {
-    case "weapon": return "武器"
-    case "ritual": return "祭具"
-    case "daily": return "生活用品"
-    case "architecture": return "建築断片"
-    case "inscription": return "碑文"
-    case "machine_part": return "機械部品"
-    default: return key
     }
 }

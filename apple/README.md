@@ -23,14 +23,15 @@ apple/
 
 ```bash
 cd apple
-bash build-app.sh
-open QrArtifactChronicle.app     # 未署名のため初回は右クリック→開く
+bash build-app.sh                       # debug   → QrArtifactChronicle.app（デバッグUIあり）
+APP_CONFIG=release bash build-app.sh    # release → QrArtifactChronicleRelease.app（#if DEBUG除外）
+open QrArtifactChronicle.app            # 未署名のため初回は右クリック→開く
 ```
 
 `build-app.sh` の流れ: Rust release(cdylib+staticlib) → UniFFIバインディング生成 →
-XCFramework作成 → `swift build`(**debug**: デバッグ入力を含む) → アセット生成(qrac-assetgen) →
+XCFramework作成 → `swift build`（`APP_CONFIG`で debug/release 切替） → アセット生成(qrac-assetgen) →
 `.app` 組み立て（assets/sounds 同梱・`NSCameraUsageDescription` 付与・ad-hoc署名）。
-※ リリース版は `swift build -c release` で、デバッグ専用UI(`#if DEBUG`)が除外される。
+リリースでは `#if DEBUG` のデバッグUIが除外され、別バンドルID＋別名 `QrArtifactChronicleRelease.app` で出力。
 
 ## Xcode で開く場合
 
@@ -43,7 +44,9 @@ macOS 上で **phone フレーム（360×800）** のゲーム画面を表示（
 
 - **遺物カード**: 合成画像（レア度色の枠）＋ ★レア度 ＋ 名称 ＋ 文明/時代/カテゴリ チップ ＋
   バランスに効くステータス（基本★ / 時代補正 / 最終★ / 保存度 / 汚れ / 破損 / DBフォールバック段 / hash）。
-- **ページ遷移**: メイン / 展示室 / 遺物詳細 / カメラ（phoneフレーム内スライド）。
+- **ページ遷移**: メイン / 展示室 / 遺物詳細 / カメラ / 設定（phoneフレーム内スライド）。
+- **多言語（i18n）**: ヘッダーの**設定⚙️**で 英語 / 日本語 / システム追従 を即時切替・永続化。UI文言・
+  カテゴリ語彙・遺物表示名・**解説文**まで言語連動（明色テーマ固定）。
 - **カメラQRスキャナ**（リリースの主入力）: Vision `VNDetectBarcodesRequest` でライブ検出（撮影不要・
   リンク自動表示なし）。複数カメラ一覧/切替（内蔵 / iPhone連係 / 外付け）。
 - **発掘演出**: ファミコン風パラパラ＋効果音。新規=女の子採掘→「新発見！」、既出=師匠が叱る→「もちだしちゃった…」。

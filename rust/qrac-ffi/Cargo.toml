@@ -1,6 +1,6 @@
 [package]
 name = "qrac-ffi"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "UniFFI 境界。qrac-core(純粋決定論コア)を Swift/Kotlin へ公開する。docs/08 8.5。"
 

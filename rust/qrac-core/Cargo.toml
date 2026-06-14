@@ -1,6 +1,6 @@
 [package]
 name = "qrac-core"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "QrArtifactChronicle deterministic core (Rust). Mirrors ../../reference (TS oracle); verified byte-identical via golden vectors. See ../../docs/08."
 

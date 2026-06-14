@@ -6,17 +6,22 @@
 ## 公開API
 
 ```rust
-#[uniffi::export] fn configure_assets(dir: String)                           // ベース画像のdir設定
-#[uniffi::export] fn derive_qr(text: String) -> Artifact                     // 属性（年は自動抽出）
+enum Lang { Ja, En }                                                          // 解説文の言語
+
+#[uniffi::export] fn configure_assets(dir: String)                            // ベース画像のdir設定
+#[uniffi::export] fn derive_qr(text: String) -> Artifact                      // 属性（年は自動抽出）
 #[uniffi::export] fn derive_qr_with_year(text: String, year: Option<i32>) -> Artifact
-#[uniffi::export] fn render_qr(text: String) -> RenderedImage                // derive→DB選択→合成→PNG
-#[uniffi::export] fn render_qr_with_year(text: String, year: Option<i32>) -> RenderedImage
+#[uniffi::export] fn render_qr(text: String, lang: Lang) -> RenderedImage      // derive→DB選択→合成→PNG＋解説
+#[uniffi::export] fn render_qr_with_year(text: String, year: Option<i32>, lang: Lang) -> RenderedImage
+#[uniffi::export] fn describe_qr(text: String, lang: Lang) -> String           // 解説文のみ（言語切替の再生成用）
 ```
 
-- `Artifact` = 属性（hash / レア度 / 文明・時代・カテゴリ / 色 / 汚れ / 破損 / 保存度）。
+- `Lang` は**表示テキスト（解説文）専用**。ハッシュ・属性・決定論には一切影響しない。
+- `Artifact` = 属性（hash / レア度 / 文明・時代・カテゴリ / 色 / 汚れ / 破損 / 保存度）。文明等は英語キー。
 - `RenderedImage` = `{ width, height, png(バイト列), base_name, matched_stage, description }`。
-  画像は **PNGバイト列**で返す（ネイティブで `NSImage`/`Bitmap` 化）。`description` は民明書房調の解説文。
-- 収集の保存/一覧はFFIに持たず、Swift側（`collection.json`）で実施。
+  画像は **PNGバイト列**で返す（ネイティブで `NSImage`/`Bitmap` 化）。`description` は萬象書房調の解説文。
+- 表示名はSwift側が civ/時代/カテゴリ＋★ から多言語生成（`base_name` は参考値）。
+- 収集の保存/一覧はFFIに持たず、Swift側（`collection.json`：QR文字列＋PNGを保存し、解説文は言語別に都度再生成）で実施。
 
 ## macOS 最小動作デモ
 

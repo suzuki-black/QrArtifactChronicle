@@ -7,6 +7,7 @@ import AppKit
 struct CameraScanView: View {
     let onScan: (String) -> Void
     let onCancel: () -> Void
+    @EnvironmentObject var settings: Settings
     @StateObject private var scanner = Scanner()
 
     var body: some View {
@@ -30,9 +31,9 @@ struct CameraScanView: View {
     private var header: some View {
         HStack(spacing: 8) {
             Button { scanner.stop(); onCancel() } label: {
-                Label("とじる", systemImage: "xmark").font(.callout.bold())
+                Label(settings.t("とじる", "Close"), systemImage: "xmark").font(.callout.bold())
             }.buttonStyle(.borderedProminent).tint(.gray).controlSize(.small)
-            Text("QRを読み取る").font(.title3.bold())
+            Text(settings.t("QRを読み取る", "Scan QR")).font(.title3.bold())
             Spacer()
             cameraMenu
         }
@@ -41,7 +42,8 @@ struct CameraScanView: View {
     }
 
     private var currentCameraName: String {
-        scanner.devices.first { $0.uniqueID == scanner.currentID }?.localizedName ?? "カメラ"
+        scanner.devices.first { $0.uniqueID == scanner.currentID }?.localizedName
+            ?? settings.t("カメラ", "Camera")
     }
 
     private var cameraMenu: some View {
@@ -56,7 +58,7 @@ struct CameraScanView: View {
             }
             Divider()
             Button { scanner.refreshDevices() } label: {
-                Label("カメラを再検索", systemImage: "arrow.clockwise")
+                Label(settings.t("カメラを再検索", "Re-scan cameras"), systemImage: "arrow.clockwise")
             }
         } label: {
             Label(currentCameraName, systemImage: "video.fill")
@@ -72,14 +74,17 @@ struct CameraScanView: View {
             CameraPreview(session: scanner.session)
             reticle
         case .authorizing, .idle:
-            ProgressView("カメラを準備中…").tint(.white).foregroundStyle(.white)
+            ProgressView(settings.t("カメラを準備中…", "Preparing camera…"))
+                .tint(.white).foregroundStyle(.white)
         case .denied:
-            message("カメラの使用が許可されていません",
-                    "システム設定 ＞ プライバシーとセキュリティ ＞ カメラ で本アプリを許可してください。")
+            message(settings.t("カメラの使用が許可されていません", "Camera access is not allowed"),
+                    settings.t("システム設定 ＞ プライバシーとセキュリティ ＞ カメラ で本アプリを許可してください。",
+                               "Allow this app under System Settings ＞ Privacy & Security ＞ Camera."))
         case .noCamera:
-            message("カメラが見つかりません", "この端末で使えるカメラがありません。")
+            message(settings.t("カメラが見つかりません", "No camera found"),
+                    settings.t("この端末で使えるカメラがありません。", "No usable camera on this device."))
         case .error(let m):
-            message("エラー", m)
+            message(settings.t("エラー", "Error"), m)
         }
     }
 
@@ -90,7 +95,7 @@ struct CameraScanView: View {
                 .stroke(.white, lineWidth: 3)
                 .frame(width: 220, height: 220)
                 .background(Color.white.opacity(0.04))
-            Text("QRコードを枠内に収めてください")
+            Text(settings.t("QRコードを枠内に収めてください", "Fit the QR code in the frame"))
                 .font(.callout.bold()).foregroundStyle(.white)
                 .padding(.horizontal, 12).padding(.vertical, 6)
                 .background(.black.opacity(0.5)).clipShape(Capsule())

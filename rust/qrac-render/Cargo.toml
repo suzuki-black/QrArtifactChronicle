@@ -1,6 +1,6 @@
 [package]
 name = "qrac-render"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "I/O層: ベース遺物DB選択(docs/03)と画像合成(docs/05)。qrac-core(純粋)に依存。"
 

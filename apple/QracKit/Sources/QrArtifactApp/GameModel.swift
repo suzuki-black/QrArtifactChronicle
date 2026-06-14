@@ -17,18 +17,23 @@ final class GameModel: ObservableObject {
     @Published var stage: UInt8 = 0
     @Published var descriptionText: String = ""
 
+    /// 解説文の言語（ContentView が Settings と同期）。表示のみに影響。
+    var lang: Lang = .ja
+    private(set) var currentText = ""      // 表示中遺物のQR文字列（言語切替で説明再生成）
+
     // 発掘演出
     enum DigPhase: Equatable { case idle, digging, scolding }
     @Published var phase: DigPhase = .idle
     private var discovered = Set<String>()        // 発掘済み artifactHash
     private var pendingArt: Artifact?
     private var pendingRender: RenderedImage?
+    private var pendingText = ""
     private var isNewDiscovery = false
 
-    // 展示室（発掘済み一覧）
+    // 展示室（発掘済み一覧）。説明文は言語別に都度生成するため text を保持し name/description は持たない。
     struct Collected: Identifiable, Equatable, Codable {
         let id: String          // artifactHash
-        let name: String
+        let text: String        // QR内容（説明文・表示名の多言語生成に使う）
         let civ: String
         let era: String
         let category: String
@@ -43,8 +48,6 @@ final class GameModel: ObservableObject {
         let wear: Bool
         let stage: Int
         let png: Data
-        let description: String
-        var haystack: String { "\(name) \(civ) \(era) \(category) \(description)" }
     }
     @Published var collected: [Collected] = []
 
@@ -71,18 +74,18 @@ final class GameModel: ObservableObject {
     }
 
     /// 新規なら展示室に追加して保存（自動保存）。既出なら何もしない。
-    private func registerIfNew(_ a: Artifact, _ r: RenderedImage) {
+    private func registerIfNew(_ a: Artifact, _ r: RenderedImage, text: String) {
         guard !discovered.contains(a.artifactHash) else { return }
         discovered.insert(a.artifactHash)
         collected.append(Collected(
-            id: a.artifactHash, name: r.baseName,
+            id: a.artifactHash, text: text,
             civ: a.civ, era: a.era, category: a.category,
             baseRarity: Int(a.baseRarity), eraBonus: Int(a.eraBonus),
             finalRarity: Int(a.finalRarity), isMythic: a.isMythic,
             preservation: a.preservationScore, dirt: a.dirtLayerId,
             chip: a.damage.chip, crack: a.damage.crack, wear: a.damage.wear,
             stage: Int(r.matchedStage),
-            png: Data(r.png), description: r.description))
+            png: Data(r.png)))
         save()
     }
 
@@ -106,7 +109,8 @@ final class GameModel: ObservableObject {
         useYear ? deriveQrWithYear(text: input, year: year) : deriveQr(text: input)
     }
     private func render() -> RenderedImage {
-        useYear ? renderQrWithYear(text: input, year: year) : renderQr(text: input)
+        useYear ? renderQrWithYear(text: input, year: year, lang: lang)
+                : renderQr(text: input, lang: lang)
     }
 
     /// 入力が空（空白のみ含む）か。空文字のQRは現実に存在しないため発掘不可。
@@ -117,6 +121,7 @@ final class GameModel: ObservableObject {
     /// 無演出で即表示（起動・プリセット・年変更用）。発掘済み登録はしない。
     func dig() {
         guard canExcavate else { return }
+        currentText = input
         commit(derive(), render())
     }
 
@@ -128,6 +133,17 @@ final class GameModel: ObservableObject {
         descriptionText = r.description
     }
 
+    /// 言語切替時: 表示中遺物の説明文を現在の言語で再生成（画像は言語非依存なので据置）。
+    func relocalize() {
+        guard artifact != nil, !currentText.isEmpty else { return }
+        descriptionText = describeQr(text: currentText, lang: lang)
+    }
+
+    /// 指定 Collected の説明文を現在の言語で生成。
+    func description(for item: Collected) -> String {
+        describeQr(text: item.text, lang: lang)
+    }
+
     /// 「発掘」ボタン: 新規なら採掘アニメ→新発見、既出なら師匠が叱る→持ち出し。いずれも最後に遺物表示。
     func excavate() {
         guard canExcavate else { return }
@@ -135,6 +151,7 @@ final class GameModel: ObservableObject {
         let r = render()
         pendingArt = a
         pendingRender = r
+        pendingText = input
         isNewDiscovery = !discovered.contains(a.artifactHash)
         phase = isNewDiscovery ? .digging : .scolding
     }
@@ -142,17 +159,19 @@ final class GameModel: ObservableObject {
     /// ランダム（デバッグ）: アニメ無しで即・次々に表示。新規は自動保存。
     func randomExcavate() {
         input = "QR-\(Int.random(in: 0..<10_000_000))"
+        currentText = input
         let a = derive()
         let r = render()
         commit(a, r)
-        registerIfNew(a, r)
+        registerIfNew(a, r, text: input)
     }
 
     /// モーダル（アニメ→バナー、約3秒）終了時に呼ばれる。新規・既出いずれも遺物を表示し、新規は自動保存。
     func finishDigAnimation() {
         if let a = pendingArt, let r = pendingRender {
+            currentText = pendingText
             commit(a, r)
-            registerIfNew(a, r)
+            registerIfNew(a, r, text: pendingText)
         }
         pendingArt = nil
         pendingRender = nil

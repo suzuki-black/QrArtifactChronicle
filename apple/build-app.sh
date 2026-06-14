@@ -6,6 +6,21 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 RUST="$ROOT/rust"
 
+# APP_CONFIG=debug(既定) | release
+#   debug  : デバッグ入力パネルあり（開発用）→ QrArtifactChronicle.app
+#   release: #if DEBUG が外れ手入力等を除外（本番想定）→ QrArtifactChronicleRelease.app
+CONFIG="${APP_CONFIG:-debug}"
+if [ "$CONFIG" = "release" ]; then
+  SWIFT_BUILD_FLAGS="-c release"
+  APP_NAME="QrArtifactChronicleRelease"
+  BUNDLE_ID="com.example.qrartifactchronicle.release"
+else
+  SWIFT_BUILD_FLAGS=""
+  APP_NAME="QrArtifactChronicle"
+  BUNDLE_ID="com.example.qrartifactchronicle"
+fi
+echo "== build config: $CONFIG → $APP_NAME.app =="
+
 echo "1) Rust release ビルド（cdylib + staticlib）"
 ( cd "$RUST" && cargo build -p qrac-ffi --release )
 
@@ -23,35 +38,34 @@ xcodebuild -create-xcframework \
     -library "$RUST/target/release/libqrac_ffi.a" -headers "$HERE/headers" \
     -output "$HERE/QracFFI.xcframework" >/dev/null
 
-# 開発用は debug ビルド（デバッグ入力パネルを含む）。リリースは #if DEBUG により入力パネルを除外。
-echo "4) SwiftUI アプリを debug ビルド（デバッグ入力あり）"
-( cd "$HERE/QracKit" && swift build 2>&1 | grep -vE "ld: warning|was built for newer" || true )
-BIN="$(cd "$HERE/QracKit" && swift build --show-bin-path)/QrArtifactApp"
+echo "4) SwiftUI アプリを $CONFIG ビルド"
+( cd "$HERE/QracKit" && swift build $SWIFT_BUILD_FLAGS 2>&1 | grep -vE "ld: warning|was built for newer" || true )
+BIN="$(cd "$HERE/QracKit" && swift build $SWIFT_BUILD_FLAGS --show-bin-path)/QrArtifactApp"
 
 echo "5) アセット生成（ベース画像＋DB, カバレッジゲート）"
 ( cd "$RUST" && cargo run -q -p qrac-assetgen -- "$HERE/.assets-build" )
 
 echo "6) .app バンドルを組み立て（アセット同梱）"
-APP="$HERE/QrArtifactChronicle.app"
+APP="$HERE/$APP_NAME.app"
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BIN" "$APP/Contents/MacOS/QrArtifactApp"
 cp -R "$HERE/.assets-build/assets" "$APP/Contents/Resources/assets"
 cp -R "$HERE/sounds" "$APP/Contents/Resources/sounds"
-cat > "$APP/Contents/Info.plist" <<'PLIST'
+cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0"><dict>
-  <key>CFBundleName</key><string>QrArtifactChronicle</string>
+  <key>CFBundleName</key><string>$APP_NAME</string>
   <key>CFBundleExecutable</key><string>QrArtifactApp</string>
-  <key>CFBundleIdentifier</key><string>com.example.qrartifactchronicle</string>
+  <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
   <key>CFBundlePackageType</key><string>APPL</string>
-  <key>CFBundleShortVersionString</key><string>0.1.0</string>
+  <key>CFBundleShortVersionString</key><string>0.2.0</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>13.0</string>
   <key>NSPrincipalClass</key><string>NSApplication</string>
   <key>NSHighResolutionCapable</key><true/>
-  <key>NSCameraUsageDescription</key><string>QRコードを読み取って遺物を発掘するためにカメラを使用します。</string>
+  <key>NSCameraUsageDescription</key><string>QR code scanning to excavate artifacts. / QRコードを読み取って遺物を発掘するためにカメラを使用します。</string>
 </dict></plist>
 PLIST
 

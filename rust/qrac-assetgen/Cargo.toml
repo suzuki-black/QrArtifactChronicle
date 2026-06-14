@@ -1,6 +1,6 @@
 [package]
 name = "qrac-assetgen"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 description = "アセット生成ツール（docs/05 5.6）: ベース画像 + 全rarityマス充足の artifacts.sqlite を出力し、カバレッジをCIゲート検証する。"
 

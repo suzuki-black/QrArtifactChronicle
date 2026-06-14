@@ -561,7 +561,7 @@ dependencies = [
 
 [[package]]
 name = "qrac-assetgen"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qrac-core",
  "qrac-render",
@@ -569,7 +569,7 @@ dependencies = [
 
 [[package]]
 name = "qrac-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "serde",
  "serde_json",
@@ -579,7 +579,7 @@ dependencies = [
 
 [[package]]
 name = "qrac-ffi"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qrac-core",
  "qrac-render",
@@ -588,7 +588,7 @@ dependencies = [
 
 [[package]]
 name = "qrac-render"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "qrac-core",
  "rusqlite",

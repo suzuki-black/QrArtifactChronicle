@@ -2,9 +2,12 @@ import SwiftUI
 
 /// 遺物の詳細ページ。メイン画面に似ているが、操作系は無く「もどる」だけ。
 struct ArtifactDetailView: View {
+    @ObservedObject var model: GameModel
+    @EnvironmentObject var settings: Settings
     let item: GameModel.Collected
     let onBack: () -> Void
 
+    @State private var desc: String = ""
     private let detailLabel = Color(white: 0.38)
 
     var body: some View {
@@ -14,14 +17,16 @@ struct ArtifactDetailView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color(red: 0.96, green: 0.94, blue: 0.89))
+        .onAppear { desc = model.description(for: item) }
+        .onChange(of: settings.language) { _ in desc = model.description(for: item) }
     }
 
     private var header: some View {
         HStack(spacing: 8) {
             Button { onBack() } label: {
-                Label("もどる", systemImage: "chevron.left").font(.callout.bold())
+                Label(settings.t("もどる", "Back"), systemImage: "chevron.left").font(.callout.bold())
             }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.small)
-            Text("遺物詳細").font(.title3.bold())
+            Text(settings.t("遺物詳細", "Artifact detail")).font(.title3.bold())
             Spacer()
         }
         .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 10)
@@ -45,16 +50,18 @@ struct ArtifactDetailView: View {
                     .foregroundStyle(rarityColor(item.finalRarity))
                     .lineLimit(1).minimumScaleFactor(0.5)
                 if item.isMythic {
-                    Text("神話級").font(.caption.bold())
+                    Text(settings.mythicLabel).font(.caption.bold())
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Color.pink.opacity(0.2)).foregroundStyle(.pink).clipShape(Capsule())
                 }
             }
-            Text(item.name).font(.headline).foregroundStyle(.black).multilineTextAlignment(.center)
+            Text(settings.artifactName(civ: item.civ, era: item.era, category: item.category,
+                                       rarity: item.finalRarity))
+                .font(.headline).foregroundStyle(.black).multilineTextAlignment(.center)
             HStack(spacing: 6) {
-                chip(categoryJP(item.category), .teal)
-                chip(item.civ, .brown)
-                chip(item.era, .indigo)
+                chip(settings.civName(item.civ), .brown)
+                chip(settings.eraName(item.era), .indigo)
+                chip(settings.categoryName(item.category), .teal)
             }
             statGrid
             bookExcerpt
@@ -66,16 +73,16 @@ struct ArtifactDetailView: View {
 
     private var statGrid: some View {
         let cols = [GridItem(.flexible()), GridItem(.flexible())]
-        let dmg = [item.chip ? "欠" : nil, item.crack ? "ひび" : nil, item.wear ? "摩耗" : nil]
-            .compactMap { $0 }.joined(separator: "/")
+        let stageVal = item.stage == 7 ? "GLOBAL" : settings.t("段\(item.stage)", "stage \(item.stage)")
         return LazyVGrid(columns: cols, spacing: 6) {
-            stat("基本レア度", "★\(item.baseRarity)")
-            stat("時代補正", "+\(item.eraBonus)")
-            stat("最終レア度", "★\(item.finalRarity)")
-            stat("保存度", "\(Int(item.preservation * 100))%")
-            stat("汚れ", item.dirt)
-            stat("破損", dmg.isEmpty ? "なし" : dmg)
-            stat("DB段", item.stage == 7 ? "GLOBAL" : "段\(item.stage)")
+            stat(settings.t("基本レア度", "Base rarity"), "★\(item.baseRarity)")
+            stat(settings.t("時代補正", "Era bonus"), "+\(item.eraBonus)")
+            stat(settings.t("最終レア度", "Final rarity"), "★\(item.finalRarity)")
+            stat(settings.t("保存度", "Preservation"), "\(Int(item.preservation * 100))%")
+            stat(settings.t("汚れ", "Dirt"), settings.dirtName(item.dirt))
+            stat(settings.t("破損", "Damage"),
+                 settings.damageText(chip: item.chip, crack: item.crack, wear: item.wear))
+            stat(settings.t("DB段", "DB stage"), stageVal)
             stat("hash", String(item.id.prefix(8)))
         }
         .font(.caption)
@@ -85,11 +92,11 @@ struct ArtifactDetailView: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: "book.closed.fill").foregroundStyle(.brown)
-                Text("詳説 世界の遺物").font(.subheadline.bold()).foregroundStyle(.brown)
+                Text(settings.bookTitle).font(.subheadline.bold()).foregroundStyle(.brown)
             }
-            Text(item.description).font(.callout).foregroundStyle(.black.opacity(0.88))
+            Text(desc).font(.callout).foregroundStyle(.black.opacity(0.88))
                 .fixedSize(horizontal: false, vertical: true).lineSpacing(3)
-            Text("萬象書房 発行　1890年刊版より抜粋")
+            Text(settings.bookFooter)
                 .font(.caption2).foregroundStyle(detailLabel)
                 .frame(maxWidth: .infinity, alignment: .trailing)
         }

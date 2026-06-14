@@ -13,4 +13,5 @@ pub mod timestamp;
 pub mod types;
 
 pub use derive::{derive_attributes, derive_from_string};
+pub use flavor::Lang;
 pub use types::{ColorMod, Damage, DerivedAttributes};
