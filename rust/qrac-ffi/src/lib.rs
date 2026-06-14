@@ -1,0 +1,162 @@
+//! UniFFI 境界（docs/08 8.5）。純粋コア qrac-core ＋ I/O層 qrac-render を Swift/Kotlin に公開する。
+//! ここは「橋渡し」だけ。決定論ロジックは一切持たない。
+
+use qrac_core::derive_from_string;
+use qrac_core::hash::make_seed;
+use qrac_core::normalize::normalize_key;
+use qrac_render::{load_base_png, render_png, ArtifactDb, CANVAS_H, CANVAS_W};
+use std::path::PathBuf;
+use std::sync::{Mutex, OnceLock};
+
+uniffi::setup_scaffolding!();
+
+/// 遺物DB（メモリ・初回シード）。Step 3 で実DBファイルに差し替える。
+fn db() -> &'static Mutex<ArtifactDb> {
+    static DB: OnceLock<Mutex<ArtifactDb>> = OnceLock::new();
+    DB.get_or_init(|| {
+        let db = ArtifactDb::open_in_memory().expect("open db");
+        db.seed_full().expect("seed db");
+        Mutex::new(db)
+    })
+}
+
+/// ベース画像アセットの所在（qrac-assetgen の出力 `<dist>/assets`）。未設定なら手続き生成。
+fn assets_dir() -> &'static Mutex<Option<PathBuf>> {
+    static D: OnceLock<Mutex<Option<PathBuf>>> = OnceLock::new();
+    D.get_or_init(|| Mutex::new(None))
+}
+
+/// アセットディレクトリを設定（例: アプリ同梱の assets/ パス）。
+#[uniffi::export]
+pub fn configure_assets(dir: String) {
+    *assets_dir().lock().unwrap() = Some(PathBuf::from(dir));
+}
+
+/// 色違い HSV 補正。
+#[derive(uniffi::Record)]
+pub struct ColorMod {
+    pub h_shift: f64,
+    pub s_mul: f64,
+    pub v_mul: f64,
+}
+
+/// 破損状態。
+#[derive(uniffi::Record)]
+pub struct Damage {
+    pub chip: bool,
+    pub crack: bool,
+    pub wear: bool,
+}
+
+/// 図鑑表示に必要な遺物属性（DB選択・画像合成は次フェーズ）。
+#[derive(uniffi::Record)]
+pub struct Artifact {
+    pub artifact_hash: String,
+    pub base_rarity: u32,
+    pub era_bonus: u32,
+    pub final_rarity: u32,
+    pub is_mythic: bool,
+    pub civ: String,
+    pub era: String,
+    pub category: String,
+    pub color: ColorMod,
+    pub dirt_layer_id: String,
+    pub damage: Damage,
+    pub preservation_score: f64,
+}
+
+fn to_artifact(a: qrac_core::DerivedAttributes) -> Artifact {
+    Artifact {
+        artifact_hash: a.artifact_hash,
+        base_rarity: a.base_rarity,
+        era_bonus: a.era_bonus,
+        final_rarity: a.final_rarity,
+        is_mythic: a.is_mythic,
+        civ: a.civ,
+        era: a.era,
+        category: a.category,
+        color: ColorMod {
+            h_shift: a.color_mod.h_shift,
+            s_mul: a.color_mod.s_mul,
+            v_mul: a.color_mod.v_mul,
+        },
+        dirt_layer_id: a.dirt_layer_id,
+        damage: Damage {
+            chip: a.damage.chip,
+            crack: a.damage.crack,
+            wear: a.damage.wear,
+        },
+        preservation_score: a.preservation_score,
+    }
+}
+
+/// QR文字列 → 遺物（年は内容から自動抽出）。
+#[uniffi::export]
+pub fn derive_qr(text: String) -> Artifact {
+    to_artifact(derive_from_string(&text, None))
+}
+
+/// QR文字列 → 遺物（年を明示。None=年代取得不可として +0）。
+#[uniffi::export]
+pub fn derive_qr_with_year(text: String, year: Option<i32>) -> Artifact {
+    // Some(None) = 強制 null。ここでは year を「指定 or 取得不可」として渡す。
+    to_artifact(derive_from_string(&text, Some(year)))
+}
+
+/// 合成済み画像（PNGバイト列＋寸法）＋解説文。
+#[derive(uniffi::Record)]
+pub struct RenderedImage {
+    pub width: u32,
+    pub height: u32,
+    pub png: Vec<u8>,
+    /// 選ばれたベース遺物の名称（DB由来）。
+    pub base_name: String,
+    /// 当たったフォールバック段（1..6, 7=GLOBAL）。
+    pub matched_stage: u8,
+    /// 民明書房調の解説文（「詳説 世界の遺物」より抜粋の体裁）。
+    pub description: String,
+}
+
+fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes) -> RenderedImage {
+    let seed = make_seed(&normalize_key(text.as_bytes()));
+    let base = {
+        let db = db().lock().unwrap();
+        db.select_base(
+            &seed,
+            &attr.civ,
+            &attr.era,
+            &attr.category,
+            attr.base_rarity,
+        )
+    };
+    // ベース画像をアセットから読込（あれば）。無ければ手続き生成にフォールバック。
+    let sprite = assets_dir()
+        .lock()
+        .unwrap()
+        .as_ref()
+        .and_then(|d| load_base_png(d, base.image_set_id, "museum"));
+    let png = render_png(attr, &base, sprite.as_deref());
+    let description = qrac_core::flavor::describe(&seed, attr);
+    RenderedImage {
+        width: CANVAS_W,
+        height: CANVAS_H,
+        png,
+        base_name: base.name,
+        matched_stage: base.matched_stage,
+        description,
+    }
+}
+
+/// QR文字列 → 合成画像（derive → DB選択 → 6層合成 → PNG）。
+#[uniffi::export]
+pub fn render_qr(text: String) -> RenderedImage {
+    let attr = derive_from_string(&text, None);
+    render_impl(&text, &attr)
+}
+
+/// 年指定つきレンダ（デバッグ/バランス確認用。None=年代取得不可として +0）。
+#[uniffi::export]
+pub fn render_qr_with_year(text: String, year: Option<i32>) -> RenderedImage {
+    let attr = derive_from_string(&text, Some(year));
+    render_impl(&text, &attr)
+}

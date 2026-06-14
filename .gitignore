@@ -1,0 +1,17 @@
+# --- Build outputs (regenerated) ---
+**/target/
+**/.build/
+*.xcframework/
+*.app/
+apple/headers/
+apple/.assets-build/
+rust/dist/
+
+# Kept on purpose (do NOT ignore):
+#   reference/vectors/golden.json   … language-neutral determinism oracle
+#   apple/sounds/*.wav              … source sound assets
+
+# --- macOS / editors ---
+.DS_Store
+*.swp
+*~

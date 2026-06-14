@@ -1,0 +1,19 @@
+[package]
+name = "qrac-ffi"
+version = "0.1.0"
+edition = "2021"
+description = "UniFFI 境界。qrac-core(純粋決定論コア)を Swift/Kotlin へ公開する。docs/08 8.5。"
+
+[lib]
+crate-type = ["cdylib", "staticlib", "lib"]
+name = "qrac_ffi"
+
+# 同一 uniffi バージョンでバインディング生成するための bin。
+[[bin]]
+name = "uniffi-bindgen"
+path = "src/bin/uniffi-bindgen.rs"
+
+[dependencies]
+qrac-core = { path = "../qrac-core" }
+qrac-render = { path = "../qrac-render" }
+uniffi = { version = "0.29", features = ["cli"] }

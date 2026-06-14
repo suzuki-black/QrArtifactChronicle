@@ -1,0 +1,10 @@
+[package]
+name = "qrac-render"
+version = "0.1.0"
+edition = "2021"
+description = "I/O層: ベース遺物DB選択(docs/03)と画像合成(docs/05)。qrac-core(純粋)に依存。"
+
+[dependencies]
+qrac-core = { path = "../qrac-core" }
+rusqlite = { version = "0.32", features = ["bundled"] }  # 同梱SQLite。docs/03
+tiny-skia = "0.11"                                       # CPU合成。docs/05 / docs/08 8.6

@@ -1,0 +1,296 @@
+{
+  "genVersion": 1,
+  "vectors": [
+    {
+      "label": "empty",
+      "input": {
+        "text": ""
+      },
+      "output": {
+        "seedHex": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+        "artifactHash": "5df6e0e2761359d30a8275058e299fcc",
+        "baseRarity": 1,
+        "eraBonus": 0,
+        "finalRarity": 1,
+        "isMythic": false,
+        "civ": "desert",
+        "era": "medieval",
+        "category": "architecture",
+        "colorMod": {
+          "hShift": 85.5684332763974,
+          "sMul": 1.3977640321688116,
+          "vMul": 1.2056906106921566
+        },
+        "dirtLayerId": "sand",
+        "damage": {
+          "chip": true,
+          "crack": false,
+          "wear": false
+        },
+        "preservationScore": 0.4284789476193101
+      }
+    },
+    {
+      "label": "ascii",
+      "input": {
+        "text": "hello world"
+      },
+      "output": {
+        "seedHex": "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9",
+        "artifactHash": "bc62d4b80d9e36da29c16c5d4d9f1173",
+        "baseRarity": 2,
+        "eraBonus": 0,
+        "finalRarity": 2,
+        "isMythic": false,
+        "civ": "desert",
+        "era": "modern",
+        "category": "architecture",
+        "colorMod": {
+          "hShift": 91.27709140309645,
+          "sMul": 0.8851793652953116,
+          "vMul": 0.9062714694794524
+        },
+        "dirtLayerId": "sand",
+        "damage": {
+          "chip": false,
+          "crack": false,
+          "wear": false
+        },
+        "preservationScore": 0.8282216966360734
+      }
+    },
+    {
+      "label": "url_plain",
+      "input": {
+        "text": "https://example.com/path"
+      },
+      "output": {
+        "seedHex": "5faa4bf4918ff56562141cc328545ec8f7b6dd27470cbdf4a7487593b3e83738",
+        "artifactHash": "97cb9190a5d781d0ad886886f3910fbf",
+        "baseRarity": 1,
+        "eraBonus": 0,
+        "finalRarity": 1,
+        "isMythic": false,
+        "civ": "mountain",
+        "era": "early_modern",
+        "category": "inscription",
+        "colorMod": {
+          "hShift": 62.552112604854955,
+          "sMul": 0.9835018489790858,
+          "vMul": 1.2361737719219903
+        },
+        "dirtLayerId": "none",
+        "damage": {
+          "chip": false,
+          "crack": true,
+          "wear": false
+        },
+        "preservationScore": 0.5992197597451627
+      }
+    },
+    {
+      "label": "url_query",
+      "input": {
+        "text": "https://EXAMPLE.com:443/Path/?b=2&a=1#frag"
+      },
+      "output": {
+        "seedHex": "57188493ba6b8d61451d97aa0b431a2880a153103fa196273004ee7df0413b43",
+        "artifactHash": "619f02d7aab4d23bffee4efb30ca1fe3",
+        "baseRarity": 1,
+        "eraBonus": 0,
+        "finalRarity": 1,
+        "isMythic": false,
+        "civ": "desert",
+        "era": "medieval",
+        "category": "inscription",
+        "colorMod": {
+          "hShift": -13.044310003552283,
+          "sMul": 1.2000934272716504,
+          "vMul": 0.8045941303625226
+        },
+        "dirtLayerId": "none",
+        "damage": {
+          "chip": false,
+          "crack": true,
+          "wear": true
+        },
+        "preservationScore": 0.33536543030954585
+      }
+    },
+    {
+      "label": "japanese",
+      "input": {
+        "text": "古代の遺物QRコード"
+      },
+      "output": {
+        "seedHex": "5b27d5ea907dfd423a1cb06445fd545f60da7ffca8302b69633364b577818b84",
+        "artifactHash": "7916a62752a841e8719945151940ccc8",
+        "baseRarity": 4,
+        "eraBonus": 0,
+        "finalRarity": 4,
+        "isMythic": false,
+        "civ": "mountain",
+        "era": "early_modern",
+        "category": "machine_part",
+        "colorMod": {
+          "hShift": -120.48304523211036,
+          "sMul": 1.3050968298735945,
+          "vMul": 1.1402909836435928
+        },
+        "dirtLayerId": "volcanic_ash",
+        "damage": {
+          "chip": true,
+          "crack": false,
+          "wear": false
+        },
+        "preservationScore": 0.4845433386716865
+      }
+    },
+    {
+      "label": "vcard_2014",
+      "input": {
+        "text": "BEGIN:VCARD\nREV:2014-03-10T19:00:00Z\nEND:VCARD"
+      },
+      "output": {
+        "seedHex": "2b2140d3d528edf1c803bbbb025bc12e9d0d652d174b47ae0549ddec9747983a",
+        "artifactHash": "b52575a326330068a263b3d74259c405",
+        "baseRarity": 2,
+        "eraBonus": 1,
+        "finalRarity": 3,
+        "isMythic": false,
+        "civ": "ocean",
+        "era": "medieval",
+        "category": "ritual",
+        "colorMod": {
+          "hShift": 85.93113807120119,
+          "sMul": 1.1010362456603549,
+          "vMul": 0.7595695351684587
+        },
+        "dirtLayerId": "none",
+        "damage": {
+          "chip": false,
+          "crack": false,
+          "wear": false
+        },
+        "preservationScore": 0.13704882628001172
+      }
+    },
+    {
+      "label": "ical_2008",
+      "input": {
+        "text": "BEGIN:VEVENT\nDTSTAMP:20081231T120000Z\nEND:VEVENT"
+      },
+      "output": {
+        "seedHex": "33c62c71620a994439fbe45524baec4b659b03f492111ba46424958daae42ce6",
+        "artifactHash": "0498630019bb1cbc89cb5f05561e4f25",
+        "baseRarity": 2,
+        "eraBonus": 2,
+        "finalRarity": 4,
+        "isMythic": false,
+        "civ": "machine",
+        "era": "medieval",
+        "category": "architecture",
+        "colorMod": {
+          "hShift": 99.23175367948863,
+          "sMul": 1.2137585982912897,
+          "vMul": 0.7868815841129991
+        },
+        "dirtLayerId": "none",
+        "damage": {
+          "chip": false,
+          "crack": false,
+          "wear": true
+        },
+        "preservationScore": 0.4152797645119941
+      }
+    },
+    {
+      "label": "url_unix_2020",
+      "input": {
+        "text": "https://t.example/x?t=1577836800"
+      },
+      "output": {
+        "seedHex": "2baa222dea563d4da5602ce9342c31f5ab284402aa321aa348e8fc64cb51801a",
+        "artifactHash": "e0a5e554179ed5005b5f6ab44b6ed94b",
+        "baseRarity": 1,
+        "eraBonus": 0,
+        "finalRarity": 1,
+        "isMythic": false,
+        "civ": "mountain",
+        "era": "modern",
+        "category": "inscription",
+        "colorMod": {
+          "hShift": 58.236769236336215,
+          "sMul": 1.2897298106305333,
+          "vMul": 0.7538386091865983
+        },
+        "dirtLayerId": "sand",
+        "damage": {
+          "chip": true,
+          "crack": true,
+          "wear": false
+        },
+        "preservationScore": 0.16209886641073087
+      }
+    },
+    {
+      "label": "iso_1985",
+      "input": {
+        "text": "log entry 1985-06-15 archived"
+      },
+      "output": {
+        "seedHex": "b8a1fcbf84bb51c9785aa699d41ca856826ab0ac3ab20feee20ca3786a69bbe4",
+        "artifactHash": "1c57971c381964323728a5edc587e333",
+        "baseRarity": 4,
+        "eraBonus": 4,
+        "finalRarity": 8,
+        "isMythic": false,
+        "civ": "ocean",
+        "era": "medieval",
+        "category": "weapon",
+        "colorMod": {
+          "hShift": -62.824597565044414,
+          "sMul": 1.387027127198552,
+          "vMul": 0.7758579793076383
+        },
+        "dirtLayerId": "volcanic_ash",
+        "damage": {
+          "chip": false,
+          "crack": true,
+          "wear": true
+        },
+        "preservationScore": 0.8507470109788908
+      }
+    },
+    {
+      "label": "year_override_1979",
+      "input": {
+        "text": "anything",
+        "year": 1979
+      },
+      "output": {
+        "seedHex": "ee0874170b7f6f32b8c2ac9573c428d35b575270a66b757c2c0185d2bd09718d",
+        "artifactHash": "2a0353879c656a9e74d7ab90143a5002",
+        "baseRarity": 2,
+        "eraBonus": 5,
+        "finalRarity": 7,
+        "isMythic": false,
+        "civ": "machine",
+        "era": "medieval",
+        "category": "daily",
+        "colorMod": {
+          "hShift": 77.29278892597176,
+          "sMul": 1.0533101922114148,
+          "vMul": 1.2034083280855103
+        },
+        "dirtLayerId": "none",
+        "damage": {
+          "chip": true,
+          "crack": false,
+          "wear": false
+        },
+        "preservationScore": 0.7101494873308483
+      }
+    }
+  ]
+}

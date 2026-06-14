@@ -1,0 +1,16 @@
+[package]
+name = "qrac-core"
+version = "0.1.0"
+edition = "2021"
+description = "QrArtifactChronicle deterministic core (Rust). Mirrors ../../reference (TS oracle); verified byte-identical via golden vectors. See ../../docs/08."
+
+# 決定論に関わる依存は版をピン留めし、その版を genVersion の一部とみなす（docs/08 8.10）。
+[dependencies]
+sha2 = "=0.10.8"                    # SHA-256（byte一致）
+unicode-normalization = "=0.1.24"  # タグの NFC（実質ASCIIで no-op だが規約として固定）
+serde = { version = "1", features = ["derive"] }  # 本実装では Serialize で出力構造を表現
+
+[dev-dependencies]
+# float_roundtrip: JSONの浮動小数を厳密（正しく丸めて）パースし、f64 を完全往復させる。
+# これが無いとデフォルトパーサが1 ULP誤差を出し golden 比較が偽陰性になる。
+serde_json = { version = "1", features = ["float_roundtrip"] }

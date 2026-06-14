@@ -1,0 +1,12 @@
+{
+  "name": "qrac-reference-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "QrArtifactChronicle deterministic core — reference implementation (pure modules + determinism tests). See ../docs.",
+  "engines": { "node": ">=23.6" },
+  "scripts": {
+    "test": "node --test",
+    "gen:vectors": "node scripts/gen-vectors.ts"
+  }
+}
