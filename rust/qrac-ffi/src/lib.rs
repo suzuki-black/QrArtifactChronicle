@@ -4,7 +4,7 @@
 use qrac_core::derive_from_string;
 use qrac_core::hash::make_seed;
 use qrac_core::normalize::normalize_key;
-use qrac_render::{load_base_png, render_png, ArtifactDb, CANVAS_H, CANVAS_W};
+use qrac_render::{render_png, ArtifactDb, CANVAS_H, CANVAS_W};
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
 
@@ -145,13 +145,11 @@ fn render_impl(text: &str, attr: &qrac_core::DerivedAttributes, lang: Lang) -> R
             attr.base_rarity,
         )
     };
-    // ベース画像をアセットから読込（あれば）。無ければ手続き生成にフォールバック。
-    let sprite = assets_dir()
-        .lock()
-        .unwrap()
-        .as_ref()
-        .and_then(|d| load_base_png(d, base.image_set_id, "museum"));
-    let png = render_png(attr, &base, sprite.as_deref());
+    // アセットディレクトリ配下のレイヤーPNGで6層合成（無いレイヤーは手続き生成にフォールバック）。
+    let png = {
+        let dir = assets_dir().lock().unwrap();
+        render_png(attr, &base, dir.as_deref())
+    };
     let description = qrac_core::flavor::describe(&seed, attr, lang.into());
     RenderedImage {
         width: CANVAS_W,

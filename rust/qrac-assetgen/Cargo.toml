@@ -11,3 +11,4 @@ path = "src/main.rs"
 [dependencies]
 qrac-core = { path = "../qrac-core" }
 qrac-render = { path = "../qrac-render" }
+tiny-skia = "0.11"

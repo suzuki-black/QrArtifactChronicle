@@ -565,6 +565,7 @@ version = "0.2.0"
 dependencies = [
  "qrac-core",
  "qrac-render",
+ "tiny-skia",
 ]
 
 [[package]]

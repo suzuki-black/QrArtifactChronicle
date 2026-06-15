@@ -64,8 +64,8 @@ qrac-core/  （純粋・決定論。I/Oゼロ。reference/src/*.ts と1:1, golde
 
 qrac-render/  （I/O。qrac-core に依存）
   src/ db.rs       # docs/03 候補選択・6段フォールバック（rusqlite）
-       compose.rs  # docs/05 画像合成（tiny-skia）※現状は手続き描画の暫定（8.6）
-       assets.rs   # ベース画像PNGの読込
+       compose.rs  # docs/05 画像合成（tiny-skia・6層／ブレンド／マスク, 8.6）
+       art.rs      # 手続きアート（ベース被写体・汚れ/破損/背景レイヤー生成）
        lib.rs
 
 qrac-ffi/   （UniFFI境界。qrac-core + qrac-render に依存。8.5）
@@ -140,22 +140,25 @@ struct RenderedImage { width, height, png: bytes, baseName, matchedStage, descri
 
 ## 8.6 画像合成（tiny-skia, CPU）
 
-> ⚠️ **現状は手続き描画の暫定実装**。`docs/05` 5.2 の「6層・名前付きブレンドモード・透過PNGレイヤー」
-> の本格版は未実装（ロードマップ）。下記は実コード `qrac-render/src/compose.rs` の挙動。
+> ✅ **6層合成は実装済み**（`docs/05` 5.2 準拠）。透過PNGレイヤー＋名前付きブレンドモード＋被写体マスク。
+> 残差分はロードマップ（解像度1024²／LRUキャッシュ／写真アート差し替え）。下記は実コード
+> `qrac-render/src/compose.rs`＋`art.rs` の挙動。
 
-実装（`render(attr, base, sprite_png: Option<&[u8]>)`、キャンバス **512×512**）:
+実装（`render(attr, base, assets_dir: Option<&Path>)`、キャンバス **512×512**）:
 ```
-1. baseImage : sprite_png があればデコード、無ければ render_base_sprite で手続き生成
+1. baseImage : assets_dir/base/<id>/<style>/0.png をデコード、無ければ art::base_sprite で手続き生成
 2. HSV       : apply_hsv（per-pixel、層2。docs通り）
-3. dirt      : 種別色の半透明な円を複数描画（強度=preservationScore由来）   ← 暫定（PNG/ブレンド未）
-4. damage    : 摩耗=白半透明 / ひび=ジグザグ線 / 欠け=背景色の三角でカット   ← 暫定
-5. preservation : 低いほど全面に薄いダスト矩形                              ← 暫定（カラーグレード未）
-6. background: 背景色（museum固定）
+5. preserve  : apply_preservation（彩度/明度/コントラストのカラーグレード、層5。docs通り）
+   chip      : DestinationOut で被写体アルファを削る（欠け）
+   →ここで被写体シルエットの Mask を作成（以降の汚れ/破損を被写体内に限定）
+6. background: assets_dir/bg/<style>.png（無ければ art::background）→ その上に被写体を合成
+3. dirt      : assets_dir/layers/dirt/<id>.png（無ければ art::dirt_texture）を
+               Multiply（sea_salt のみ Screen）＋マスク＋強度=dirtStrength、hash由来の回転で個体差
+4. damage    : wear=SoftLight / crack=Multiply（いずれもマスク＋強度=damageStrength）
 ```
-- 出力は `render_png`（PNGバイト列）/ `render_rgba`。
-- 未実装（ロードマップ）: 名前付きブレンドモード（Multiply/SoftLight/Screen）、汚れ/破損の透過PNG
-  レイヤー、`apply_preservation` のカラーグレード、スタイル別背景、解像度1024²、LRUキャッシュ。
-- アセット差し替え可: `sprite_png` を実アート（WebP→PNG等）に置けばそのまま使える（README参照）。
+- レイヤーPNGは `qrac-assetgen` が事前生成（`assets/{base,layers/dirt,layers/damage,bg}`）。
+- 出力は `render_png`（PNGバイト列）/ `render_rgba`。手続き生成（`art.rs`）は実行時フォールバック兼ねる。
+- ロードマップ: 解像度1024²、LRUキャッシュ、写真アート（外部生成）への差し替え（README参照）。
 
 ## 8.7 DB（rusqlite）
 
@@ -211,8 +214,8 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
    Swift 経由でも hash が golden と一致＝FFI越しでも決定論を確認。`bash qrac-ffi/demo/run.sh` で再現。
    ✅ SwiftUI を Xcode アプリ化＋xcframework 埋め込み（`apple/`）。`bash apple/build-app.sh` で
    `QrArtifactChronicle.app` を生成（macOS arm64）。残: iOS/Androidスライス・署名配布。
-3. ✅ `db.rs`（候補選択・6段フォールバック / `qrac-render`）＋ `compose.rs`（tiny-skia 6層・手続き描画）。
-   FFI に `render_qr` を追加し、Swift で実際の遺物画像(PNG)を表示。残: 実アセット化は Step 3(下記)。
+3. ✅ `db.rs`（候補選択・6段フォールバック / `qrac-render`）＋ `compose.rs`（tiny-skia 6層・PNGレイヤー＋ブレンド＋マスク）。
+   FFI に `render_qr` を追加し、Swift で実際の遺物画像(PNG)を表示。残: 写真アート差し替え（下記）。
    ※ db/compose は純粋コアを汚さないよう別クレート `qrac-render` に分離（docs/08 8.3 を更新）。
 4. iOS: cargo の `aarch64-apple-ios` ターゲット追加、Swift層はmacOSと大半共有。
 5. Android: cargo の Android ターゲット＋UniFFI(Kotlin)、Compose UI、Play Asset Delivery。
@@ -227,14 +230,17 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 - [x] UniFFI の API（8.5）: `derive_qr` / `derive_qr_with_year` / `render_qr`。
 - [x] Rust `qrac-core` 純粋部の実装＋ `tests/golden.rs` で `golden.json` 再現一致（`rust/qrac-core/`）。
 - [x] UniFFI 橋渡し → macOS(SwiftUI)アプリ（`apple/`, `QrArtifactChronicle.app`）→ `db.rs`/`compose.rs`（`rust/qrac-render`）。
-- [x] **実行時アセット統合**: `compose::render(attr, base, sprite_png)` がベース画像PNGを読み込み、
-      per-pixel HSV(層2)＋汚れ/破損/保存/背景を合成。FFI `configure_assets` で assets dir 設定、
-      アプリは同梱 `Resources/assets` を使用（無ければ手続き生成にフォールバック）。
-      アセットが層1を駆動することを `sprite_bytes_actually_drive_layer1` テストで保証。
+- [x] **実行時アセット統合＋本格6層合成**: `compose::render(attr, base, assets_dir)` が
+      `assets_dir` 配下のベース／汚れ／破損／背景の透過PNGレイヤーを読み込み、tiny-skia の
+      ブレンドモード（Multiply/Screen/SoftLight/DestinationOut）＋被写体マスクで層1〜6を固定順合成。
+      HSV(層2)・apply_preservation(層5)・hash由来の汚れ回転も実装。レイヤー欠落時は `art.rs` の
+      手続き生成にフォールバック。FFI `configure_assets` で assets dir 設定、アプリは同梱
+      `Resources/assets` を使用。レイヤーは `qrac-assetgen` が事前生成。
 - [ ] iOS/Android スライス（xcframework マルチプラットフォーム / cargo-ndk）と署名配布。
-- [ ] ベース画像をアーティスト製 WebP に差し替え（レイアウト・命名はそのまま）。
+- [ ] ベース画像をアーティスト製/写真風 WebP に差し替え（レイアウト・命名はそのまま）。
 - [ ] **UniFFI(MPL-2.0) → 手書き C ABI FFI 置換**（依存ツリーを完全に寛容化。商用クローズド時のみ必須）。
-- [ ] `compose` の本格6層化（透過PNGレイヤー＋ブレンドモード）・LRUキャッシュ・解像度1024²。
+- [x] `compose` の本格6層化（透過PNGレイヤー＋ブレンドモード＋マスク）— `compose.rs`/`art.rs`/`qrac-assetgen`。
+- [ ] 合成のLRUキャッシュ・解像度1024²化。
 - [ ] 収集の軽量化（画像保存をやめ、キー＋genVersionから再生成 / docs/06 6.3）。
 
 ## 8.12 macOS アプリの実装機能（`apple/QracKit`）

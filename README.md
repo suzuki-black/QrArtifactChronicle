@@ -11,10 +11,11 @@ collect them into your own museum.
   <img src="docs/screenshots/hero-3.png" width="240" alt="excavated artifact — ritual disc">
 </p>
 
-> ⚠️ **Prototype (v0.2.0).** The deterministic engine is solid and fully tested. The artwork is
-> currently **stylized placeholder graphics generated procedurally** — the photo-realistic,
-> "museum / dig-site / catalog" rendering described below is the **design goal**, not the current
-> look. Treat the images above as real engine output, not final art.
+> ⚠️ **Prototype (v0.2.0).** The deterministic engine is solid and fully tested, and the **real
+> 6-layer compositor is implemented** (shaded base + dirt, wear, cracks, chips, a preservation
+> color-grade, and per-style backgrounds). The artwork itself is still **procedurally generated,
+> stylized — not photographic**; the "museum / dig-site / catalog" photo look described below is the
+> **end goal**. Treat the images above as real engine output, not final art.
 
 **[English](#english) · [日本語](#日本語)**
 
@@ -54,8 +55,8 @@ No monsters, no battles, no stats to grind. QrArtifactChronicle is its own genre
 The goal is for every artifact to look like a **museum-grade photograph** — the same relic shown
 as a glass-case *museum* exhibit, a muddy *dig-site* find, and a clean *catalogue* plate. Dirt,
 cracks and preservation are applied on the fly so each piece feels like a real object pulled from
-the ground. *(In this prototype the renderer is a procedural placeholder; the photographic
-pipeline is on the roadmap — see [docs/05](docs/05-image-pipeline.md).)*
+the ground. *(The 6-layer compositor is implemented; today's art is procedurally generated and
+stylized, with swap-in photographic art on the roadmap — see [docs/05](docs/05-image-pipeline.md).)*
 
 ## Your daily life becomes a dig site
 
@@ -132,8 +133,9 @@ Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6.
 ### Roadmap
 
 - [x] In-app localization (English / 日本語), flavour text included.
-- [ ] Photo-realistic artwork (real museum / dig-site / catalogue rendering; replace placeholders).
-- [ ] Real 6-layer compositing (dirt/damage PNG layers + blend modes) — currently procedural.
+- [x] Real 6-layer compositing (dirt/damage PNG layers + blend modes + subject mask).
+- [ ] Photo-realistic artwork (real museum / dig-site / catalogue rendering; replace procedural art).
+- [ ] Compositing LRU cache and 1024² resolution.
 - [ ] iOS & Android targets (multi-platform XCFramework; Kotlin bindings via cargo-ndk).
 - [ ] Replace UniFFI (MPL-2.0) with a hand-written C ABI for a fully permissive tree (only needed
       for a strict closed-source posture; MPL is fine for this MIT/OSS release).
@@ -160,9 +162,10 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 
 日常で出会うQRコードを、架空の古代文明の遺物に変えて、自分だけの博物館に収集できます。
 
-> ⚠️ **プロトタイプ (v0.2.0)。** 決定論エンジンは完成・テスト済みですが、**画像は現状すべて
-> 手続き生成のプレースホルダ**です。下記の「写真風（博物館／発掘現場／図録）」は**設計目標**で
-> あって現状の見た目ではありません。上の画像は実エンジン出力（最終アートではない）です。
+> ⚠️ **プロトタイプ (v0.2.0)。** 決定論エンジンは完成・テスト済みで、**6層合成（陰影つきベース＋
+> 汚れ・摩耗・ひび・欠け・保存状態グレード＋スタイル別背景）も実装済み**です。ただし現状のアートは
+> **写真ではなく手続き生成のスタイライズ**であり、下記の「写真風（博物館／発掘現場／図録）」は
+> **最終目標**です。上の画像は実エンジン出力（最終アートではない）です。
 
 ## これは何？
 
@@ -190,8 +193,8 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 
 目標は、各遺物を**博物館級の写真**として見せること——同じ遺物を、ガラスケースの「博物館」、
 泥のついた「発掘現場」、清潔な「図録」の3スタイルで。汚れ・ひび・保存状態をその場で重ね、
-本当に地中から出土した実物のように感じさせます。*（本プロトタイプの描画は手続き生成の暫定版で、
-写真パイプラインはロードマップ：[docs/05](docs/05-image-pipeline.md)）*
+本当に地中から出土した実物のように感じさせます。*（6層合成エンジンは実装済み。現状のアートは
+手続き生成のスタイライズで、写真アートへの差し替えがロードマップ：[docs/05](docs/05-image-pipeline.md)）*
 
 ## 日常が発掘現場になる
 
