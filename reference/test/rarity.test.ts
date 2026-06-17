@@ -1,7 +1,12 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
 import { eraBonusFor, finalRarity, clampRarity, isMythic } from "../src/rarity.ts";
 import { extractYear } from "../src/timestamp.ts";
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 test("eraBonusFor: decade boundaries (docs/02 2.2)", () => {
   assert.equal(eraBonusFor(2025), 0);
@@ -50,4 +55,15 @@ test("extractYear: explicit dates only, newest wins, no guessing", () => {
   assert.equal(extractYear("price 1980 yen only"), null); // 裸の4桁は対象外
   assert.equal(extractYear("plain text no date"), null);
   assert.equal(extractYear(null), null); // バイナリ
+});
+
+test("extractYear: shared corpus parity (year_corpus.json ≡ Rust)", () => {
+  // Rust の tests/year_corpus.rs と同一ファイルを検証 → TS/Rust の検出が byte 単位で一致。
+  const corpus = JSON.parse(
+    readFileSync(join(here, "..", "vectors", "year_corpus.json"), "utf8"),
+  ) as { cases: { desc: string; text: string | null; expected: number | null }[] };
+  assert.ok(corpus.cases.length > 0);
+  for (const c of corpus.cases) {
+    assert.equal(extractYear(c.text), c.expected, c.desc);
+  }
 });

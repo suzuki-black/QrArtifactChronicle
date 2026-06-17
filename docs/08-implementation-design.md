@@ -223,7 +223,9 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 **着手前に片付ける確定タスク**
 - [x] `reference/` の離散判定を**整数しきい値**へ更新（rng/rarity/appearance）＋ `golden.json` 再生成（8.4）。
 - [x] `RARITY_CUTOFFS_U32` / `DAMAGE_CUTOFFS_U32` を確定し、TS/Rust 同一リテラルで共有（`constants.test.ts` でロック）。
-- [ ] `extractYear` の対象形式コーパスを整備（誤検出/取りこぼしの回帰テスト, `docs/07` Q1表）。
+- [x] `extractYear` の対象形式コーパスを整備（誤検出/取りこぼしの回帰テスト, `docs/07` Q1表）。
+      共有コーパス `reference/vectors/year_corpus.json`（36ケース）を TS(`rarity.test.ts`)/Rust(`tests/year_corpus.rs`)
+      の双方が検証し、検出のTS≡Rustパリティを固定。
 - [x] アセット生成ツール（`docs/05` 5.6）の「全rarityマス充足」CIゲート実装 → `rust/qrac-assetgen`。
       `dist/artifacts.sqlite`（1500行＋GLOBAL）＋`dist/assets/base/<id>/<style>/0.png`（450枚）を生成し、
       150 combo の ★1..10 充足を検証（欠け→exit 1）。
