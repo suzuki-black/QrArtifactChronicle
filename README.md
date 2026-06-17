@@ -136,11 +136,13 @@ Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6.
 - [x] In-app localization (English / 日本語), flavour text included.
 - [x] Real 6-layer compositing (dirt/damage PNG layers + blend modes + subject mask).
 - [ ] Photo-realistic artwork (real museum / dig-site / catalogue rendering; replace procedural art).
-- [ ] Compositing LRU cache and 1024² resolution.
-- [ ] iOS & Android targets (multi-platform XCFramework; Kotlin bindings via cargo-ndk).
+- [x] 1024² rendering + in-memory LRU cache for regenerated detail images.
+- [x] Lightweight collection — store thumbnails, regenerate full-res detail on demand.
+- [x] Extraction regression corpus locking TS≡Rust year detection.
+- [ ] iOS & Android targets (multi-platform XCFramework; Kotlin bindings via cargo-ndk) + code
+      signing / notarization for store distribution.
 - [ ] Replace UniFFI (MPL-2.0) with a hand-written C ABI for a fully permissive tree (only needed
       for a strict closed-source posture; MPL is fine for this MIT/OSS release).
-- [ ] Lightweight collection (regenerate from key) and code signing / notarization.
 
 ## Why this project exists
 

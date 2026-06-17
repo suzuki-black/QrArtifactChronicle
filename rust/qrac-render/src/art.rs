@@ -1,15 +1,32 @@
 //! 手続きアート生成（docs/05）。陰影付きベース＋汚れ/破損/背景の各レイヤーを生成する。
 //! qrac-assetgen がこれらを PNG に書き出し、compose は同じ関数を実行時フォールバックにも使う。
 //! ※ 写真ではなく「質感のあるスタイライズ」。決定論の必須要件ではない（同一性は属性/hash）。
+//!
+//! 解像度: 出力は CANVAS_W×CANVAS_H（=1024², docs/05 5.2 目標）。アートは 512 の「デザイン空間」で
+//! 記述し、描画時に `tf()`（SCALE 倍の拡大変換）を掛けて出力解像度へ写す。これにより座標リテラルを
+//! 触らずに解像度を変えられ、ベクタ図形はネイティブ高解像度で（＝拡大ボケなしで）描かれる。
+//! グラデは local 行列を identity にし、SCALE は fill/stroke 変換側だけが持つ（path とズレないため）。
 
 use tiny_skia::{
     Color, FillRule, GradientStop, LinearGradient, Mask, MaskType, Paint, PathBuilder, Pixmap,
     Point, SpreadMode, Stroke, Transform,
 };
 
-pub const CANVAS_W: u32 = 512;
-pub const CANVAS_H: u32 = 512;
-const CX: f32 = 256.0;
+pub const CANVAS_W: u32 = 1024;
+pub const CANVAS_H: u32 = 1024;
+const DESIGN: f32 = 512.0; // 座標を記述する基準解像度
+const SCALE: f32 = CANVAS_W as f32 / DESIGN;
+const CX: f32 = 256.0; // デザイン空間の中心
+
+/// デザイン空間 → 出力解像度の拡大変換（fill/stroke 用）。
+fn tf() -> Transform {
+    Transform::from_scale(SCALE, SCALE)
+}
+
+/// テクスチャの個数を面積比で補正（解像度に依らず見た目の密度を一定に保つ）。
+fn dens(n: usize) -> usize {
+    (n as f32 * SCALE * SCALE) as usize
+}
 
 /// 決定論PRNG（xorshift64）。
 pub struct Rng(u64);
@@ -98,7 +115,7 @@ pub fn civ_base_hue(civ: &str) -> f32 {
     }
 }
 
-/// カテゴリ別の被写体シルエット。
+/// カテゴリ別の被写体シルエット（デザイン空間 512）。
 pub fn shape_path(category: &str) -> tiny_skia::Path {
     let mut pb = PathBuilder::new();
     let (cx, cy) = (CX, 256.0);
@@ -152,7 +169,7 @@ fn shape_mask(shape: &tiny_skia::Path) -> Mask {
         shape,
         &solid(255, 255, 255, 255),
         FillRule::Winding,
-        Transform::identity(),
+        tf(),
         None,
     );
     Mask::from_pixmap(sp.as_ref(), MaskType::Alpha)
@@ -161,11 +178,11 @@ fn shape_mask(shape: &tiny_skia::Path) -> Mask {
 /// 層1: 陰影＋質感つきベース被写体（背景透過、civの自然色）。
 pub fn base_sprite(civ: &str, category: &str) -> Pixmap {
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
+    let t = tf();
     let shape = shape_path(category);
     let mask = shape_mask(&shape);
 
-    // 上→下の縦グラデで立体感（上が明るい）
+    // 上→下の縦グラデで立体感（上が明るい）。グラデ local 行列は identity（拡大は t が担う）。
     let hue = civ_base_hue(civ);
     let (tr, tg, tb) = hsv_to_rgb(hue, 0.42, 0.88);
     let (br, bg, bb) = hsv_to_rgb(hue, 0.58, 0.44);
@@ -177,7 +194,7 @@ pub fn base_sprite(civ: &str, category: &str) -> Pixmap {
             GradientStop::new(1.0, Color::from_rgba8(br, bg, bb, 255)),
         ],
         SpreadMode::Pad,
-        id,
+        Transform::identity(),
     );
     let mut paint = Paint {
         anti_alias: true,
@@ -188,11 +205,11 @@ pub fn base_sprite(civ: &str, category: &str) -> Pixmap {
     } else {
         paint.set_color_rgba8(tr, tg, tb, 255);
     }
-    pm.fill_path(&shape, &paint, FillRule::Winding, id, None);
+    pm.fill_path(&shape, &paint, FillRule::Winding, t, None);
 
     // 斑（質感）: シルエット内に微小ドットを散らす
     let mut rng = Rng::from_str(&format!("{civ}/{category}"));
-    for _ in 0..170 {
+    for _ in 0..dens(170) {
         let x = rng.range(70.0, 442.0);
         let y = rng.range(70.0, 442.0);
         let rad = rng.range(1.0, 3.2);
@@ -205,7 +222,7 @@ pub fn base_sprite(civ: &str, category: &str) -> Pixmap {
         let mut pb = PathBuilder::new();
         pb.push_circle(x, y, rad);
         if let Some(p) = pb.finish() {
-            pm.fill_path(&p, &c, FillRule::Winding, id, Some(&mask));
+            pm.fill_path(&p, &c, FillRule::Winding, t, Some(&mask));
         }
     }
 
@@ -223,7 +240,7 @@ pub fn base_sprite(civ: &str, category: &str) -> Pixmap {
             width: 5.0,
             ..Default::default()
         },
-        id,
+        t,
         None,
     );
     pm
@@ -246,10 +263,10 @@ pub fn dirt_texture(dirt: &str) -> Option<Pixmap> {
         return None;
     }
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
+    let t = tf();
     let (r, g, b) = dirt_rgb(dirt);
     let mut rng = Rng::from_str(&format!("dirt/{dirt}"));
-    let blobs = if dirt == "sea_salt" { 90 } else { 46 };
+    let blobs = dens(if dirt == "sea_salt" { 90 } else { 46 });
     for _ in 0..blobs {
         let x = rng.range(0.0, 512.0);
         let y = rng.range(0.0, 512.0);
@@ -262,7 +279,7 @@ pub fn dirt_texture(dirt: &str) -> Option<Pixmap> {
         let mut pb = PathBuilder::new();
         pb.push_circle(x, y, rad);
         if let Some(p) = pb.finish() {
-            pm.fill_path(&p, &solid(r, g, b, a), FillRule::Winding, id, None);
+            pm.fill_path(&p, &solid(r, g, b, a), FillRule::Winding, t, None);
         }
     }
     Some(pm)
@@ -271,9 +288,9 @@ pub fn dirt_texture(dirt: &str) -> Option<Pixmap> {
 /// 層4(摩耗): 明るいスクラッチ（SoftLight 合成想定）。
 pub fn wear_layer() -> Pixmap {
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
+    let t = tf();
     let mut rng = Rng::from_str("damage/wear");
-    for _ in 0..26 {
+    for _ in 0..dens(26) {
         let x0 = rng.range(60.0, 452.0);
         let y0 = rng.range(60.0, 452.0);
         let len = rng.range(20.0, 90.0);
@@ -290,7 +307,7 @@ pub fn wear_layer() -> Pixmap {
                     width: rng.range(1.0, 2.5),
                     ..Default::default()
                 },
-                id,
+                t,
                 None,
             );
         }
@@ -301,10 +318,10 @@ pub fn wear_layer() -> Pixmap {
 /// 層4(ひび): 暗い亀裂網（Multiply 合成想定）。
 pub fn crack_layer() -> Pixmap {
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
+    let t = tf();
     let mut rng = Rng::from_str("damage/crack");
     let paint = solid(20, 16, 14, 230);
-    // 主幹2本＋枝
+    // 主幹2本＋枝（本数は構造なので解像度に依らず固定）
     for _ in 0..2 {
         let mut x = rng.range(180.0, 332.0);
         let mut y = 110.0;
@@ -323,7 +340,7 @@ pub fn crack_layer() -> Pixmap {
                     width: 3.0,
                     ..Default::default()
                 },
-                id,
+                t,
                 None,
             );
         }
@@ -342,7 +359,7 @@ pub fn crack_layer() -> Pixmap {
                     width: 1.6,
                     ..Default::default()
                 },
-                id,
+                t,
                 None,
             );
         }
@@ -353,7 +370,7 @@ pub fn crack_layer() -> Pixmap {
 /// 層4(欠け): 不透明な切り欠き形状（DestinationOut で被写体を削る）。
 pub fn chip_layer() -> Pixmap {
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
+    let t = tf();
     let mut rng = Rng::from_str("damage/chip");
     let white = solid(255, 255, 255, 255);
     for _ in 0..3 {
@@ -373,7 +390,7 @@ pub fn chip_layer() -> Pixmap {
         }
         pb.close();
         if let Some(p) = pb.finish() {
-            pm.fill_path(&p, &white, FillRule::Winding, id, None);
+            pm.fill_path(&p, &white, FillRule::Winding, t, None);
         }
     }
     pm
@@ -382,8 +399,8 @@ pub fn chip_layer() -> Pixmap {
 /// 層6: 写真風の背景（museum / dig / catalog）。全面不透明。
 pub fn background(style: &str) -> Pixmap {
     let mut pm = Pixmap::new(CANVAS_W, CANVAS_H).unwrap();
-    let id = Transform::identity();
-    let rect = tiny_skia::Rect::from_xywh(0.0, 0.0, 512.0, 512.0).unwrap();
+    let t = tf();
+    let rect = tiny_skia::Rect::from_xywh(0.0, 0.0, DESIGN, DESIGN).unwrap();
     let (top, bot, speckle) = match style {
         "dig" => ((150, 120, 84), (96, 74, 48), true), // 発掘現場（土）
         "catalog" => ((250, 249, 245), (232, 230, 224), false), // 図録（清潔）
@@ -391,13 +408,13 @@ pub fn background(style: &str) -> Pixmap {
     };
     let grad = LinearGradient::new(
         Point::from_xy(CX, 0.0),
-        Point::from_xy(CX, 512.0),
+        Point::from_xy(CX, DESIGN),
         vec![
             GradientStop::new(0.0, Color::from_rgba8(top.0, top.1, top.2, 255)),
             GradientStop::new(1.0, Color::from_rgba8(bot.0, bot.1, bot.2, 255)),
         ],
         SpreadMode::Pad,
-        id,
+        Transform::identity(),
     );
     let mut paint = Paint::default();
     if let Some(g) = grad {
@@ -408,11 +425,11 @@ pub fn background(style: &str) -> Pixmap {
     let mut pb = PathBuilder::new();
     pb.push_rect(rect);
     let bgpath = pb.finish().unwrap();
-    pm.fill_path(&bgpath, &paint, FillRule::Winding, id, None);
+    pm.fill_path(&bgpath, &paint, FillRule::Winding, t, None);
 
     if speckle {
         let mut rng = Rng::from_str(&format!("bg/{style}"));
-        for _ in 0..400 {
+        for _ in 0..dens(400) {
             let x = rng.range(0.0, 512.0);
             let y = rng.range(0.0, 512.0);
             let a = rng.range(8.0, 30.0) as u8;
@@ -425,7 +442,7 @@ pub fn background(style: &str) -> Pixmap {
             let mut p = PathBuilder::new();
             p.push_circle(x, y, rng.range(1.0, 2.5));
             if let Some(pp) = p.finish() {
-                pm.fill_path(&pp, &c, FillRule::Winding, id, None);
+                pm.fill_path(&pp, &c, FillRule::Winding, t, None);
             }
         }
     }

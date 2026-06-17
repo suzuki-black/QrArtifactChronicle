@@ -117,18 +117,39 @@ final class GameModel: ObservableObject {
 
     // MARK: - 画像（一覧サムネ保存 / 詳細はフル再生成）
 
+    // フル解像度(1024²≈4MB/枚)のメモリLRUキャッシュ。上限を超えたら最も古いものから破棄。
+    // 破棄しても text から決定論的に再生成できるため安全（docs/05 5.4 / docs/06 6.3）。
     private var fullImageCache: [String: NSImage] = [:]
+    private var fullImageLRU: [String] = []   // 末尾＝最近使用
+    private let fullImageCacheLimit = 16       // ≈64MB @1024²
 
-    /// 詳細表示用のフル解像度画像。保存せず text から決定論的に再生成（画像は年に非依存）。メモリキャッシュ。
+    /// 詳細表示用のフル解像度画像。保存せず text から決定論的に再生成（画像は年に非依存）。LRUキャッシュ。
     func fullImage(for item: Collected) -> NSImage? {
-        if let img = fullImageCache[item.id] { return img }
+        if let img = fullImageCache[item.id] {
+            touchLRU(item.id)
+            return img
+        }
         let r = renderQr(text: item.text, lang: lang)   // lang は画像に無関係（解説のみ）。
         guard let img = NSImage(data: Data(r.png)) else { return nil }
         fullImageCache[item.id] = img
+        touchLRU(item.id)
+        evictFullImagesIfNeeded()
         return img
     }
 
-    /// 512² PNG を一覧用サムネ(最大256px)へ縮小。失敗時は原本を返す。
+    private func touchLRU(_ id: String) {
+        fullImageLRU.removeAll { $0 == id }
+        fullImageLRU.append(id)
+    }
+
+    private func evictFullImagesIfNeeded() {
+        while fullImageLRU.count > fullImageCacheLimit {
+            let oldest = fullImageLRU.removeFirst()
+            fullImageCache.removeValue(forKey: oldest)
+        }
+    }
+
+    /// フル解像度 PNG を一覧用サムネ(最大256px)へ縮小。失敗時は原本を返す。
     static func thumbnailPNG(_ data: Data, maxDim: CGFloat = 256) -> Data {
         guard let src = NSImage(data: data) else { return data }
         let s = src.size
@@ -153,6 +174,7 @@ final class GameModel: ObservableObject {
         discovered = []
         favorites = []
         fullImageCache = [:]
+        fullImageLRU = []
         try? FileManager.default.removeItem(at: saveURL)
         try? FileManager.default.removeItem(at: favURL)
     }

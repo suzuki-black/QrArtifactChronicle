@@ -144,7 +144,8 @@ struct RenderedImage { width, height, png: bytes, baseName, matchedStage, descri
 > 残差分はロードマップ（解像度1024²／LRUキャッシュ／写真アート差し替え）。下記は実コード
 > `qrac-render/src/compose.rs`＋`art.rs` の挙動。
 
-実装（`render(attr, base, assets_dir: Option<&Path>)`、キャンバス **512×512**）:
+実装（`render(attr, base, assets_dir: Option<&Path>)`、キャンバス **1024×1024**。`art.rs` は 512 デザイン空間で
+記述し描画時に2倍拡大＝ベクタは高解像度ネイティブ描画）:
 ```
 1. baseImage : assets_dir/base/<id>/<style>/0.png をデコード、無ければ art::base_sprite で手続き生成
 2. HSV       : apply_hsv（per-pixel、層2。docs通り）
@@ -242,9 +243,11 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 - [ ] ベース画像をアーティスト製/写真風 WebP に差し替え（レイアウト・命名はそのまま）。
 - [ ] **UniFFI(MPL-2.0) → 手書き C ABI FFI 置換**（依存ツリーを完全に寛容化。商用クローズド時のみ必須）。
 - [x] `compose` の本格6層化（透過PNGレイヤー＋ブレンドモード＋マスク）— `compose.rs`/`art.rs`/`qrac-assetgen`。
-- [ ] 合成のLRUキャッシュ・解像度1024²化。
-- [x] 収集の軽量化（docs/06 6.3）。一覧用サムネ（最大256px）のみ保存し、詳細のフル解像度(512²)は
-      保存中の QR text から `renderQr` で都度再生成＋メモリキャッシュ。画像は年に非依存なので text だけで
+- [x] 合成のLRUキャッシュ・解像度1024²化。compose は 1024² 出力（`art.rs` は 512 デザイン空間を2倍拡大、
+      テクスチャ密度は面積比で補正）。アプリは詳細フル画像をメモリLRU（上限16枚≈64MB）でキャッシュ。
+      ※ 端末ローカルの合成結果ディスクLRU（cache/composed, docs/05 5.4）は将来課題として残置。
+- [x] 収集の軽量化（docs/06 6.3）。一覧用サムネ（最大256px）のみ保存し、詳細のフル解像度(1024²)は
+      保存中の QR text から `renderQr` で都度再生成＋メモリLRUキャッシュ。画像は年に非依存なので text だけで
       決定論的に同一画像を復元できる。`collection.json` のフィールドは不変（png にサムネを入れる）＝移行不要。
       ※完全な「キーのみ保存（属性キャッシュも再生成）」は将来の更なる軽量化として残置。
 

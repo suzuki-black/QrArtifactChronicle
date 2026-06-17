@@ -119,7 +119,8 @@ pub fn render(attr: &DerivedAttributes, base: &BaseArtifact, assets_dir: Option<
     // 層3: 汚れ（マスクで被写体内に限定、個体差で回転）
     if attr.dirt_layer_id != "none" {
         if let Some(dirt) = load_layer_opt(assets_dir, &attr.dirt_layer_id) {
-            let rot = Transform::from_rotate_at(hash_angle(&attr.artifact_hash), 256.0, 256.0);
+            let cc = CANVAS_W as f32 / 2.0;
+            let rot = Transform::from_rotate_at(hash_angle(&attr.artifact_hash), cc, cc);
             canvas.draw_pixmap(
                 0,
                 0,
@@ -255,7 +256,8 @@ mod tests {
         assert_eq!(png1, png2, "render must be deterministic");
         // 中心は被写体内なので背景のみではない
         let buf = render_rgba(&attr, &base, None);
-        let ci = ((256 * CANVAS_W + 256) * 4) as usize;
+        let c = CANVAS_W / 2;
+        let ci = ((c * CANVAS_W + c) * 4) as usize;
         assert!(
             buf.rgba[ci + 3] == 255,
             "center should be opaque (subject over bg)"
