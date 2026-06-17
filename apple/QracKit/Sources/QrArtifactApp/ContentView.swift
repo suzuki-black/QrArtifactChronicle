@@ -18,6 +18,7 @@ struct ContentView: View {
     @State private var exSearch = ""
     @State private var exCategory: String?
     @State private var exRarity: Int?
+    @State private var exFavoritesOnly = false
 
     private let phoneWidth: CGFloat = 370
 
@@ -35,7 +36,8 @@ struct ContentView: View {
                         model: model,
                         onBack: { go(.main) },
                         onSelect: { c in selected = c; go(.detail) },
-                        search: $exSearch, category: $exCategory, rarity: $exRarity)
+                        search: $exSearch, category: $exCategory, rarity: $exRarity,
+                        favoritesOnly: $exFavoritesOnly)
                         .transition(.move(edge: .trailing))
                 case .detail:
                     if let sel = selected {

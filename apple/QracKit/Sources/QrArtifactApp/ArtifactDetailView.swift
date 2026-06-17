@@ -28,6 +28,14 @@ struct ArtifactDetailView: View {
             }.buttonStyle(.borderedProminent).tint(.blue).controlSize(.small)
             Text(settings.t("遺物詳細", "Artifact detail")).font(.title3.bold())
             Spacer()
+            let fav = model.isFavorite(item.id)
+            Button { model.toggleFavorite(item.id) } label: {
+                Label(settings.t("お気に入り", "Favorite"),
+                      systemImage: fav ? "heart.fill" : "heart")
+                    .labelStyle(.iconOnly).font(.title3)
+            }
+            .buttonStyle(.bordered).tint(fav ? .pink : .gray).controlSize(.small)
+            .help(settings.t("お気に入り", "Favorite"))
         }
         .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 10)
         .background(Color(red: 0.91, green: 0.87, blue: 0.79))

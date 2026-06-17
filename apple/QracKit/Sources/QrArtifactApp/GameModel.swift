@@ -51,15 +51,21 @@ final class GameModel: ObservableObject {
     }
     @Published var collected: [Collected] = []
 
+    /// お気に入り（artifactHash の集合）。遺物データとは別管理＝collection.json を変更せず移行も不要。
+    @Published private(set) var favorites: Set<String> = []
+
     private var assetsConfigured = false
     private let saveURL: URL
+    private let favURL: URL
 
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = base.appendingPathComponent("QrArtifactChronicle", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
         saveURL = dir.appendingPathComponent("collection.json")
+        favURL = dir.appendingPathComponent("favorites.json")
         load()
+        loadFavorites()
     }
 
     private func load() {
@@ -72,6 +78,24 @@ final class GameModel: ObservableObject {
     private func save() {
         if let data = try? JSONEncoder().encode(collected) { try? data.write(to: saveURL) }
     }
+
+    private func loadFavorites() {
+        guard let data = try? Data(contentsOf: favURL),
+              let ids = try? JSONDecoder().decode([String].self, from: data) else { return }
+        favorites = Set(ids)
+    }
+
+    private func saveFavorites() {
+        if let data = try? JSONEncoder().encode(Array(favorites)) { try? data.write(to: favURL) }
+    }
+
+    /// お気に入りの切替（指定 artifactHash）。即保存。
+    func toggleFavorite(_ id: String) {
+        if favorites.contains(id) { favorites.remove(id) } else { favorites.insert(id) }
+        saveFavorites()
+    }
+
+    func isFavorite(_ id: String) -> Bool { favorites.contains(id) }
 
     /// 新規なら展示室に追加して保存（自動保存）。既出なら何もしない。
     private func registerIfNew(_ a: Artifact, _ r: RenderedImage, text: String) {
@@ -89,11 +113,13 @@ final class GameModel: ObservableObject {
         save()
     }
 
-    /// 展示室をリセット（デバッグ専用）。
+    /// 展示室をリセット（デバッグ専用）。お気に入りも消す。
     func resetCollection() {
         collected = []
         discovered = []
+        favorites = []
         try? FileManager.default.removeItem(at: saveURL)
+        try? FileManager.default.removeItem(at: favURL)
     }
 
     func configureAssetsIfBundled() {

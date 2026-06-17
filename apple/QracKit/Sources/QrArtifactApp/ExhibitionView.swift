@@ -9,6 +9,7 @@ struct ExhibitionView: View {
     @Binding var search: String
     @Binding var category: String?
     @Binding var rarity: Int?
+    @Binding var favoritesOnly: Bool
     @State private var confirmReset = false
 
     private let cats = ["weapon", "ritual", "daily", "architecture", "inscription", "machine_part"]
@@ -32,6 +33,7 @@ struct ExhibitionView: View {
         model.collected.filter { c in
             (category == nil || c.category == category)
                 && (rarity == nil || c.finalRarity == rarity)
+                && (!favoritesOnly || model.isFavorite(c.id))
                 && matches(c)
         }
         .sorted { $0.finalRarity > $1.finalRarity }
@@ -52,6 +54,7 @@ struct ExhibitionView: View {
                 }
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
+                        favoritesChip
                         rarityChip(settings.t("★すべて", "★All"), value: nil)
                         ForEach(presentRarities, id: \.self) { rarityChip("★\($0)", value: $0) }
                     }
@@ -122,6 +125,16 @@ struct ExhibitionView: View {
             .tint(rarity == value ? (value.map { rarityColor($0) } ?? .accentColor) : .gray)
     }
 
+    /// お気に入りのみ表示の切替チップ。
+    private var favoritesChip: some View {
+        Button { favoritesOnly.toggle() } label: {
+            Label(settings.t("お気に入り", "Favorites"),
+                  systemImage: favoritesOnly ? "heart.fill" : "heart")
+        }
+        .font(.caption).buttonStyle(.bordered)
+        .tint(favoritesOnly ? .pink : .gray)
+    }
+
     private func card(_ c: GameModel.Collected) -> some View {
         Button { onSelect(c) } label: {
             VStack(spacing: 5) {
@@ -134,6 +147,7 @@ struct ExhibitionView: View {
                 .frame(height: 110)
                 .overlay(RoundedRectangle(cornerRadius: 8)
                     .strokeBorder(rarityColor(c.finalRarity), lineWidth: 2))
+                .overlay(alignment: .topTrailing) { heartButton(c) }
 
                 Text(String(repeating: "★", count: c.finalRarity))
                     .font(.caption2).foregroundStyle(rarityColor(c.finalRarity))
@@ -151,5 +165,20 @@ struct ExhibitionView: View {
             .overlay(c.isMythic ? RoundedRectangle(cornerRadius: 10).strokeBorder(.pink, lineWidth: 2) : nil)
         }
         .buttonStyle(.plain)
+    }
+
+    /// カード右上のお気に入り切替ボタン。
+    private func heartButton(_ c: GameModel.Collected) -> some View {
+        let fav = model.isFavorite(c.id)
+        return Button { model.toggleFavorite(c.id) } label: {
+            Image(systemName: fav ? "heart.fill" : "heart")
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(fav ? .pink : .gray)
+                .padding(5)
+                .background(.white.opacity(0.85), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .padding(5)
+        .help(settings.t("お気に入り", "Favorite"))
     }
 }

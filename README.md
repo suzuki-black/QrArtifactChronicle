@@ -45,7 +45,8 @@ No monsters, no battles, no stats to grind. QrArtifactChronicle is its own genre
   damage, preservation), so no two feel the same.
 - 🏺 **Dirt · cracks · preservation, composited live** — wear and grime are layered at render time.
 - 📜 **Invented civilizations & eras** with a deliberately pompous, dubious encyclopaedia blurb.
-- 🏛️ **Exhibition room** — auto-saved collection with search and category / rarity filters.
+- 🏛️ **Exhibition room** — auto-saved collection with search and category / rarity / favorites filters.
+- ❤️ **Favorites** — mark any artifact with ♥ (from a card or its detail view) and filter to just those.
 - 🌐 **Bilingual (English / 日本語)** — switch instantly in Settings ⚙️; even the flavour text.
 - ✨ **Gentle, gacha-style rarity** (★1 ≈ 40% … ★10 ≈ 0.01%); mythic ★11–13 only from genuinely
   old, dated QR codes.
@@ -71,8 +72,8 @@ a personal archaeological archive of a world that never existed.
    - **New find** → a girl digs it up → *"New discovery!"* → the artifact is revealed & saved.
    - **Already owned** → your stern master scolds you (*"no two artifacts are alike — you can't
      take it from the exhibition!"*).
-4. Open the **🏛 Exhibition** to browse, search and filter by category / rarity.
-5. Tap a card for the **detail page** (image, stats, and the encyclopaedia entry).
+4. Open the **🏛 Exhibition** to browse, search and filter by category / rarity / favorites.
+5. Tap a card for the **detail page** (image, stats, and the encyclopaedia entry) — or tap ♥ to favorite it.
 
 > **Camera tip (macOS).** The MacBook built-in camera is fixed-focus and struggles with QR codes.
 > Use your **iPhone as a Continuity Camera** (autofocus reads them easily): keep it nearby (same
@@ -185,7 +186,8 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 - 🖼️ **遺物画像をその場生成**（形・色・汚れ・破損・保存状態）— 二つと同じに感じない
 - 🏺 **汚れ・ひび・保存状態をリアルタイム合成**
 - 📜 **架空文明・架空時代**＋もったいぶった胡散臭い解説文
-- 🏛️ **展示室** — 自動保存、文字検索＋カテゴリ／レア度フィルタ
+- 🏛️ **展示室** — 自動保存、文字検索＋カテゴリ／レア度／お気に入りフィルタ
+- ❤️ **お気に入り** — 遺物に♥を付けて（カード／詳細画面から）、お気に入りだけに絞り込み
 - 🌐 **英日二言語** — 設定⚙️で即時切替（解説文も）
 - ✨ **優しいガチャ的レア度**（★1≈40%…★10≈0.01%）／神話級★11〜13は“現実に古い日付のQR”限定
 
@@ -207,8 +209,8 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 3. ファミコン風の発掘演出:
    - **新規** → 女の子が掘り当て → 「しんはっけん！」→ 表示＆保存
    - **発掘済み** → お師匠様に叱られる（「同じ遺物は2つとない＝展示室から持ち出しちゃダメ！」）
-4. **🏛 展示室**で閲覧・検索・フィルタ（カテゴリ／レア度）
-5. カードをタップで**詳細**（画像・ステータス・解説文）
+4. **🏛 展示室**で閲覧・検索・フィルタ（カテゴリ／レア度／お気に入り）
+5. カードをタップで**詳細**（画像・ステータス・解説文）／♥でお気に入り登録
 
 > **カメラのコツ（macOS）**: 内蔵カメラは固定焦点でQRが苦手。**iPhoneを連係カメラ**にすると快適
 > （近接・静止・ロック → カメラメニューで選択、出なければ「カメラを再検索」）。外付けカメラも可。
