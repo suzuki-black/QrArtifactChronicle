@@ -243,7 +243,10 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 - [ ] **UniFFI(MPL-2.0) → 手書き C ABI FFI 置換**（依存ツリーを完全に寛容化。商用クローズド時のみ必須）。
 - [x] `compose` の本格6層化（透過PNGレイヤー＋ブレンドモード＋マスク）— `compose.rs`/`art.rs`/`qrac-assetgen`。
 - [ ] 合成のLRUキャッシュ・解像度1024²化。
-- [ ] 収集の軽量化（画像保存をやめ、キー＋genVersionから再生成 / docs/06 6.3）。
+- [x] 収集の軽量化（docs/06 6.3）。一覧用サムネ（最大256px）のみ保存し、詳細のフル解像度(512²)は
+      保存中の QR text から `renderQr` で都度再生成＋メモリキャッシュ。画像は年に非依存なので text だけで
+      決定論的に同一画像を復元できる。`collection.json` のフィールドは不変（png にサムネを入れる）＝移行不要。
+      ※完全な「キーのみ保存（属性キャッシュも再生成）」は将来の更なる軽量化として残置。
 
 ## 8.12 macOS アプリの実装機能（`apple/QracKit`）
 

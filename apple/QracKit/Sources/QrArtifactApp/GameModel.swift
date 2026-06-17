@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import AppKit
 import QracFFI
 
 /// ゲーム画面の状態。すべて Rust コア(deriveQr/renderQr…)を呼ぶだけ。
@@ -98,6 +99,7 @@ final class GameModel: ObservableObject {
     func isFavorite(_ id: String) -> Bool { favorites.contains(id) }
 
     /// 新規なら展示室に追加して保存（自動保存）。既出なら何もしない。
+    /// 保存する png は一覧用サムネ（縮小）。詳細のフル解像度は text から都度再生成（軽量化, docs/06 6.3）。
     private func registerIfNew(_ a: Artifact, _ r: RenderedImage, text: String) {
         guard !discovered.contains(a.artifactHash) else { return }
         discovered.insert(a.artifactHash)
@@ -109,8 +111,40 @@ final class GameModel: ObservableObject {
             preservation: a.preservationScore, dirt: a.dirtLayerId,
             chip: a.damage.chip, crack: a.damage.crack, wear: a.damage.wear,
             stage: Int(r.matchedStage),
-            png: Data(r.png)))
+            png: Self.thumbnailPNG(Data(r.png))))
         save()
+    }
+
+    // MARK: - 画像（一覧サムネ保存 / 詳細はフル再生成）
+
+    private var fullImageCache: [String: NSImage] = [:]
+
+    /// 詳細表示用のフル解像度画像。保存せず text から決定論的に再生成（画像は年に非依存）。メモリキャッシュ。
+    func fullImage(for item: Collected) -> NSImage? {
+        if let img = fullImageCache[item.id] { return img }
+        let r = renderQr(text: item.text, lang: lang)   // lang は画像に無関係（解説のみ）。
+        guard let img = NSImage(data: Data(r.png)) else { return nil }
+        fullImageCache[item.id] = img
+        return img
+    }
+
+    /// 512² PNG を一覧用サムネ(最大256px)へ縮小。失敗時は原本を返す。
+    static func thumbnailPNG(_ data: Data, maxDim: CGFloat = 256) -> Data {
+        guard let src = NSImage(data: data) else { return data }
+        let s = src.size
+        guard s.width > 0, s.height > 0 else { return data }
+        let scale = min(1, maxDim / max(s.width, s.height))
+        let w = Int((s.width * scale).rounded()), h = Int((s.height * scale).rounded())
+        guard let rep = NSBitmapImageRep(
+            bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h,
+            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
+            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return data }
+        rep.size = NSSize(width: w, height: h)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        src.draw(in: NSRect(x: 0, y: 0, width: w, height: h))
+        NSGraphicsContext.restoreGraphicsState()
+        return rep.representation(using: .png, properties: [:]) ?? data
     }
 
     /// 展示室をリセット（デバッグ専用）。お気に入りも消す。
@@ -118,6 +152,7 @@ final class GameModel: ObservableObject {
         collected = []
         discovered = []
         favorites = []
+        fullImageCache = [:]
         try? FileManager.default.removeItem(at: saveURL)
         try? FileManager.default.removeItem(at: favURL)
     }

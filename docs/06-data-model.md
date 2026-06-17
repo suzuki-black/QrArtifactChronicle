@@ -53,10 +53,12 @@ type Artifact = {
 
 > ⚠️ **実装メモ（現況）**: macOSプロトタイプは下記のSQLite軽量モデルを**まだ採用していない**。
 > 実際は Swift 側 `GameModel.Collected` を **`collection.json`（Application Support）に保存**する。
-> 保存するのは **QR文字列(text) ＋ 合成済みPNG ＋ 属性**（civ/era/category/各レア度/保存度/汚れ/破損/段）。
-> **解説文(description)は保存せず**、表示時に `describe_qr(text, lang)` で**言語別に都度再生成**する
-> （表示名も civ/era/category＋★ からSwiftが多言語生成）。画像PNGを抱える点はこの節の「画像を保存しない」
-> 方針と未一致だが、プロト段階の割り切り。「キーから完全再生成する軽量モデル」への移行はロードマップ（docs/08 8.11）。
+> 保存するのは **QR文字列(text) ＋ 一覧用サムネ(最大256px PNG) ＋ 属性**（civ/era/category/各レア度/保存度/汚れ/破損/段）。
+> **フル解像度画像(512²)は保存せず**、詳細表示時に保存中の text から `render_qr` で**都度再生成**＋メモリキャッシュ
+> する（画像は年に非依存なので text だけで決定論的に同一画像を復元できる）。**解説文(description)も保存せず**、
+> `describe_qr(text, lang)` で**言語別に都度再生成**（表示名も civ/era/category＋★ からSwiftが多言語生成）。
+> お気に入りは別ファイル `favorites.json`（artifactHash集合）。フル画像を保存しない方向に一歩進めた形で、
+> 「キーのみ保存し属性キャッシュも再生成する完全版」への移行は更なるロードマップ（docs/08 8.11）。
 
 **（設計目標）画像も `Artifact` 全体も保存しない。** 再生成可能なので、保存するのは復元に必要な最小キーだけ。
 

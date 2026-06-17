@@ -45,7 +45,8 @@ struct ArtifactDetailView: View {
         VStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.93))
-                if let img = NSImage(data: item.png) {
+                // フル解像度は text から再生成（保存はサムネのみ, docs/06 6.3）。無ければ保存サムネにフォールバック。
+                if let img = model.fullImage(for: item) ?? NSImage(data: item.png) {
                     Image(nsImage: img).resizable().interpolation(.high).scaledToFit().padding(8)
                 }
             }
