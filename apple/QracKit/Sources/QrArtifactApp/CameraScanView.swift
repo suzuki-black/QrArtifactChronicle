@@ -1,6 +1,10 @@
 import SwiftUI
 import AVFoundation
+#if os(macOS)
 import AppKit
+#else
+import UIKit
+#endif
 
 /// QRスキャンページ（A: ページ遷移）。ライブプレビュー＋ファインダー枠。
 /// 検出すると onScan（撮影不要・自動）。✕ で onCancel。
@@ -35,12 +39,16 @@ struct CameraScanView: View {
             }.buttonStyle(.borderedProminent).tint(.gray).controlSize(.small)
             Text(settings.t("QRを読み取る", "Scan QR")).font(.title3.bold())
             Spacer()
+            // カメラ切替メニューは macOS 用（連係カメラ/外付けの選択）。iOS は背面カメラ固定。
+            #if os(macOS)
             cameraMenu
+            #endif
         }
         .padding(.horizontal, 16).padding(.top, 16).padding(.bottom, 10)
         .background(Color(red: 0.91, green: 0.87, blue: 0.79))
     }
 
+    #if os(macOS)
     private var currentCameraName: String {
         scanner.devices.first { $0.uniqueID == scanner.currentID }?.localizedName
             ?? settings.t("カメラ", "Camera")
@@ -67,6 +75,7 @@ struct CameraScanView: View {
         .menuStyle(.borderlessButton)
         .fixedSize()
     }
+    #endif
 
     @ViewBuilder private var content: some View {
         switch scanner.state {
@@ -119,7 +128,8 @@ struct CameraScanView: View {
     }
 }
 
-/// AVCaptureVideoPreviewLayer を表示する NSView ラッパ。
+/// AVCaptureVideoPreviewLayer を表示するプラットフォーム別ラッパ。
+#if os(macOS)
 struct CameraPreview: NSViewRepresentable {
     let session: AVCaptureSession
     func makeNSView(context: Context) -> PreviewView {
@@ -145,3 +155,23 @@ final class PreviewView: NSView {
         previewLayer.frame = bounds
     }
 }
+#else
+struct CameraPreview: UIViewRepresentable {
+    let session: AVCaptureSession
+    func makeUIView(context: Context) -> PreviewView {
+        let v = PreviewView()
+        v.attach(session)
+        return v
+    }
+    func updateUIView(_ uiView: PreviewView, context: Context) {}
+}
+
+final class PreviewView: UIView {
+    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+    private var previewLayer: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    func attach(_ session: AVCaptureSession) {
+        previewLayer.session = session
+        previewLayer.videoGravity = .resizeAspectFill
+    }
+}
+#endif

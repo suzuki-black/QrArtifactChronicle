@@ -115,7 +115,8 @@ rust/
   qrac-render/        I/O: SQLite base-artifact DB (rusqlite) + image compose (tiny-skia)
   qrac-ffi/           UniFFI boundary exposing the core to Swift/Kotlin
   qrac-assetgen/      Asset generator: base images + full-coverage DB + CI coverage gate
-apple/                macOS SwiftUI app + XCFramework packaging (debug / release configs)
+apple/                SwiftUI app (macOS; iOS-portable via Platform.swift) + multi-platform
+                      XCFramework packaging (build-app.sh / build-xcframework.sh)
 ```
 
 ### Build & run
@@ -127,9 +128,11 @@ cd rust && cargo run -p qrac-assetgen -- dist      # generate assets (+ coverage
 cd apple && bash build-app.sh                      # debug app  → QrArtifactChronicle.app
 APP_CONFIG=release bash build-app.sh               # release app → QrArtifactChronicleRelease.app
 open apple/QrArtifactChronicle.app                 # unsigned: first launch may need right-click → Open
+cd apple && bash build-xcframework.sh              # multi-platform XCFramework (macOS + iOS device + sim)
 ```
 
-Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6.
+Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6. iOS cross-builds need `rustup` with the
+`aarch64-apple-ios` / `aarch64-apple-ios-sim` targets (see [docs/08 §8.13](docs/08-implementation-design.md)).
 
 ### Roadmap
 
@@ -139,8 +142,9 @@ Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6.
 - [x] 1024² rendering + in-memory LRU cache for regenerated detail images.
 - [x] Lightweight collection — store thumbnails, regenerate full-res detail on demand.
 - [x] Extraction regression corpus locking TS≡Rust year detection.
-- [ ] iOS & Android targets (multi-platform XCFramework; Kotlin bindings via cargo-ndk) + code
-      signing / notarization for store distribution.
+- [~] iOS foundation — Rust cross-builds for device + simulator, multi-platform XCFramework, and
+      AppKit→UIKit-portable Swift. Remaining: an Xcode iOS app target + code signing (see docs/08 §8.13).
+- [ ] Android target (Kotlin bindings via cargo-ndk; Compose UI) + store signing / notarization.
 - [ ] Replace UniFFI (MPL-2.0) with a hand-written C ABI for a fully permissive tree (only needed
       for a strict closed-source posture; MPL is fine for this MIT/OSS release).
 

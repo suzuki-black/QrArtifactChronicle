@@ -72,12 +72,19 @@ final class Scanner: NSObject, ObservableObject {
     // MARK: デバイス一覧・切替
 
     private func discover() -> [AVCaptureDevice] {
+        #if os(macOS)
+        // macOS: 内蔵＋連係カメラ(iPhone)＋外付け。位置は問わない。
         var types: [AVCaptureDevice.DeviceType] = [.builtInWideAngleCamera]
         if #available(macOS 14.0, *) {
             types = [.continuityCamera, .external, .builtInWideAngleCamera]
         }
         return AVCaptureDevice.DiscoverySession(
             deviceTypes: types, mediaType: .video, position: .unspecified).devices
+        #else
+        // iOS: 背面の広角カメラを既定に（QR向き）。
+        return AVCaptureDevice.DiscoverySession(
+            deviceTypes: [.builtInWideAngleCamera], mediaType: .video, position: .back).devices
+        #endif
     }
 
     func refreshDevices() {

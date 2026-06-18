@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import AppKit
 import QracFFI
 
 /// ゲーム画面の状態。すべて Rust コア(deriveQr/renderQr…)を呼ぶだけ。
@@ -13,7 +12,7 @@ final class GameModel: ObservableObject {
 
     // 表示中の遺物
     @Published var artifact: Artifact?
-    @Published var image: NSImage?
+    @Published var image: PlatformImage?
     @Published var baseName: String = ""
     @Published var stage: UInt8 = 0
     @Published var descriptionText: String = ""
@@ -119,18 +118,18 @@ final class GameModel: ObservableObject {
 
     // フル解像度(1024²≈4MB/枚)のメモリLRUキャッシュ。上限を超えたら最も古いものから破棄。
     // 破棄しても text から決定論的に再生成できるため安全（docs/05 5.4 / docs/06 6.3）。
-    private var fullImageCache: [String: NSImage] = [:]
+    private var fullImageCache: [String: PlatformImage] = [:]
     private var fullImageLRU: [String] = []   // 末尾＝最近使用
     private let fullImageCacheLimit = 16       // ≈64MB @1024²
 
     /// 詳細表示用のフル解像度画像。保存せず text から決定論的に再生成（画像は年に非依存）。LRUキャッシュ。
-    func fullImage(for item: Collected) -> NSImage? {
+    func fullImage(for item: Collected) -> PlatformImage? {
         if let img = fullImageCache[item.id] {
             touchLRU(item.id)
             return img
         }
         let r = renderQr(text: item.text, lang: lang)   // lang は画像に無関係（解説のみ）。
-        guard let img = NSImage(data: Data(r.png)) else { return nil }
+        guard let img = PlatformImage(data: Data(r.png)) else { return nil }
         fullImageCache[item.id] = img
         touchLRU(item.id)
         evictFullImagesIfNeeded()
@@ -151,21 +150,7 @@ final class GameModel: ObservableObject {
 
     /// フル解像度 PNG を一覧用サムネ(最大256px)へ縮小。失敗時は原本を返す。
     static func thumbnailPNG(_ data: Data, maxDim: CGFloat = 256) -> Data {
-        guard let src = NSImage(data: data) else { return data }
-        let s = src.size
-        guard s.width > 0, s.height > 0 else { return data }
-        let scale = min(1, maxDim / max(s.width, s.height))
-        let w = Int((s.width * scale).rounded()), h = Int((s.height * scale).rounded())
-        guard let rep = NSBitmapImageRep(
-            bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h,
-            bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false,
-            colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0) else { return data }
-        rep.size = NSSize(width: w, height: h)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-        src.draw(in: NSRect(x: 0, y: 0, width: w, height: h))
-        NSGraphicsContext.restoreGraphicsState()
-        return rep.representation(using: .png, properties: [:]) ?? data
+        PlatformGfx.downscalePNG(data, maxDim: maxDim)
     }
 
     /// 展示室をリセット（デバッグ専用）。お気に入りも消す。
@@ -210,7 +195,7 @@ final class GameModel: ObservableObject {
 
     private func commit(_ a: Artifact, _ r: RenderedImage) {
         artifact = a
-        image = NSImage(data: Data(r.png))
+        image = PlatformImage(data: Data(r.png))
         baseName = r.baseName
         stage = r.matchedStage
         descriptionText = r.description

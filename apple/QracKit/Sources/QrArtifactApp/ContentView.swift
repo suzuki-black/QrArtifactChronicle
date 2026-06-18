@@ -142,7 +142,7 @@ struct ContentView: View {
             ZStack {
                 RoundedRectangle(cornerRadius: 16).fill(Color(white: 0.93))
                 if let img = model.image {
-                    Image(nsImage: img).resizable().interpolation(.high).scaledToFit().padding(8)
+                    Image(platformImage: img).resizable().interpolation(.high).scaledToFit().padding(8)
                 }
             }
             .frame(height: 260)

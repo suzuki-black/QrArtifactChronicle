@@ -7,7 +7,7 @@ import PackageDescription
 // QrArtifactApp: SwiftUI アプリ本体。
 let package = Package(
     name: "QracKit",
-    platforms: [.macOS(.v13)],
+    platforms: [.macOS(.v13), .iOS(.v16)],
     products: [
         .executable(name: "QrArtifactApp", targets: ["QrArtifactApp"]),
         .library(name: "QracFFI", targets: ["QracFFI"]),

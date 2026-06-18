@@ -140,8 +140,8 @@ struct ExhibitionView: View {
             VStack(spacing: 5) {
                 ZStack {
                     RoundedRectangle(cornerRadius: 8).fill(Color(white: 0.95))
-                    if let img = NSImage(data: c.png) {
-                        Image(nsImage: img).resizable().scaledToFit().padding(4)
+                    if let img = PlatformImage(data: c.png) {
+                        Image(platformImage: img).resizable().scaledToFit().padding(4)
                     }
                 }
                 .frame(height: 110)

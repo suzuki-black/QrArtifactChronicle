@@ -218,7 +218,12 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
 3. ✅ `db.rs`（候補選択・6段フォールバック / `qrac-render`）＋ `compose.rs`（tiny-skia 6層・PNGレイヤー＋ブレンド＋マスク）。
    FFI に `render_qr` を追加し、Swift で実際の遺物画像(PNG)を表示。残: 写真アート差し替え（下記）。
    ※ db/compose は純粋コアを汚さないよう別クレート `qrac-render` に分離（docs/08 8.3 を更新）。
-4. iOS: cargo の `aarch64-apple-ios` ターゲット追加、Swift層はmacOSと大半共有。
+4. 🟡 iOS（足場実装済み）: cargo の `aarch64-apple-ios`／`aarch64-apple-ios-sim` ビルド＋
+   **マルチプラットフォーム XCFramework**（`apple/build-xcframework.sh`、macOS+iOS device+iOS sim の3スライス）。
+   Swift層は `Platform.swift`（`PlatformImage`＝NSImage/UIImage、画像縮小・プレビュー View・カメラ探索を
+   `#if os(...)` で吸収）により macOS と共有。**残（手元作業）**: Xcode の iOS アプリターゲット作成
+   （SwiftPM 実行ファイルは iOS の .app を生成できないため）・`NSCameraUsageDescription` 設定・実機署名/実行。
+   詳細は §8.13。
 5. Android: cargo の Android ターゲット＋UniFFI(Kotlin)、Compose UI、Play Asset Delivery。
 
 **着手前に片付ける確定タスク**
@@ -239,7 +244,10 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
       HSV(層2)・apply_preservation(層5)・hash由来の汚れ回転も実装。レイヤー欠落時は `art.rs` の
       手続き生成にフォールバック。FFI `configure_assets` で assets dir 設定、アプリは同梱
       `Resources/assets` を使用。レイヤーは `qrac-assetgen` が事前生成。
-- [ ] iOS/Android スライス（xcframework マルチプラットフォーム / cargo-ndk）と署名配布。
+- [🟡] iOS スライス（足場）: Rust の iOS device/sim ビルド＋マルチプラットフォーム XCFramework
+      （`apple/build-xcframework.sh`）、Swift の AppKit→UIKit 抽象化（`Platform.swift`／`#if os(...)`）まで実装。
+      残: Xcode の iOS アプリターゲット作成・署名/公証（手元作業, §8.13）。
+- [ ] Android スライス（cargo-ndk / UniFFI Kotlin / Compose UI）と Play 配信。
 - [ ] ベース画像をアーティスト製/写真風 WebP に差し替え（レイアウト・命名はそのまま）。
 - [ ] **UniFFI(MPL-2.0) → 手書き C ABI FFI 置換**（依存ツリーを完全に寛容化。商用クローズド時のみ必須）。
 - [x] `compose` の本格6層化（透過PNGレイヤー＋ブレンドモード＋マスク）— `compose.rs`/`art.rs`/`qrac-assetgen`。
@@ -273,3 +281,30 @@ reference/(TS) ── gen:vectors ──▶ vectors/golden.json ◀── tests/
   リリースでは除外（手入力欄は出ず、カメラ発掘のみ）。文字列スキャンで除外を検証済み。
 - **ビルド構成**: `bash build-app.sh`＝debug（`QrArtifactChronicle.app`、デバッグUIあり）。
   `APP_CONFIG=release bash build-app.sh`＝release（`QrArtifactChronicleRelease.app`、`#if DEBUG`除外・別バンドルID）。
+
+## 8.13 iOS スライス（足場・現況）
+
+iOS 版に向けた共有基盤まで実装済み。**実機で動く .app の生成は Xcode 側の手作業が残る**（SwiftPM の
+実行可能ターゲットは iOS の .app バンドルを生成できないため）。
+
+**実装済み（自動・検証可能）**
+- **Rust コアの iOS クロスビルド**: `aarch64-apple-ios`（実機）/ `aarch64-apple-ios-sim`（Apple Silicon シミュレータ）。
+  bundled SQLite(C) も iOS SDK 向けにコンパイルされることを確認済み。
+- **マルチプラットフォーム XCFramework**: `apple/build-xcframework.sh` が macOS+iOS device+iOS sim の
+  **3スライス**で `QracFFI.xcframework` を生成（`xcodebuild -create-xcframework`）。
+- **Swift の移植性**: `Platform.swift` に `PlatformImage`（NSImage/UIImage）・`Image(platformImage:)`・
+  画像縮小（`PlatformGfx.downscalePNG`）を集約。カメラのプレビュー View（`NSViewRepresentable`↔
+  `UIViewRepresentable`）、カメラ探索（macOS=連係/外付け、iOS=背面）、ウィンドウ系 Scene 修飾子は
+  `#if os(...)` で分岐。`Package.swift` は `.iOS(.v16)` を宣言。**macOS ビルドは回帰なし**（`swift build` 緑）。
+
+> ⚠️ **ツールチェーン注意**: iOS の std は **rustup** 管理 toolchain にある。PATH 先頭の `cargo` が Homebrew 版
+> だと iOS std を持たず "can't find crate for core/std" になる。`build-xcframework.sh` は iOS ビルドだけ
+> `rustup which --toolchain stable cargo` の絶対パスを使って回避している。
+
+**残（手元作業）**
+1. Xcode で iOS アプリターゲットを作成し、`QracKit` の Swift ソース群と `QracFFI.xcframework` を取り込む
+   （または iOS 用の `.xcodeproj` を追加）。
+2. `Info.plist` に `NSCameraUsageDescription` を設定（macOS の `build-app.sh` が出すものと同文でよい）。
+3. Apple Developer 署名でシミュレータ／実機実行・配布（カメラは実機必須）。
+4. iOS 分岐コード（UIKit プレビュー・`UIGraphicsImageRenderer` 縮小・背面カメラ探索）は標準APIで記述済みだが、
+   **iOS 実機/シミュレータでのコンパイル・動作確認は未実施**（上記ターゲット作成後に確認する）。
