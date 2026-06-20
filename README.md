@@ -80,6 +80,24 @@ a personal archaeological archive of a world that never existed.
 > Apple ID, Wi-Fi + Bluetooth on), still & locked, then pick it from the camera menu (*Re-scan
 > cameras* if needed). An external webcam also works.
 
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/screen-main.png" width="200" alt="A high-rarity artifact on the main screen">
+  <img src="docs/screenshots/screen-exhibition.png" width="200" alt="Exhibition grid with favorites and filters">
+  <img src="docs/screenshots/screen-detail.png" width="200" alt="Artifact detail — image, stats and catalogue entry">
+</p>
+<p align="center">
+  <img src="docs/screenshots/dig-excavating.png" width="200" alt="Retro dig animation — a girl excavating">
+  <img src="docs/screenshots/dig-new-find.png" width="200" alt="New discovery banner">
+  <img src="docs/screenshots/dig-scold.png" width="200" alt="Duplicate find — your master scolds you">
+</p>
+<p align="center">
+  <img src="docs/screenshots/screen-settings.png" width="200" alt="Settings — language and about">
+</p>
+
+<sub>Top: main screen (mythic-tier find) · Exhibition (favorites + category/rarity filters) · artifact detail with the fake-scholarly entry. Middle (NES-style cut-scenes): a girl digs up a **new find** · the banner · your stern master scolds you for a **duplicate** ("you can't take it from the exhibition!"). Bottom: Settings (language + about). *Prototype/debug build; artwork is procedurally generated — see the note up top.*</sub>
+
 ---
 
 ## How it works (for developers)
@@ -220,6 +238,24 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 
 > **カメラのコツ（macOS）**: 内蔵カメラは固定焦点でQRが苦手。**iPhoneを連係カメラ**にすると快適
 > （近接・静止・ロック → カメラメニューで選択、出なければ「カメラを再検索」）。外付けカメラも可。
+
+## スクリーンショット
+
+<p align="center">
+  <img src="docs/screenshots/screen-main.png" width="200" alt="メイン画面（高レア度の遺物）">
+  <img src="docs/screenshots/screen-exhibition.png" width="200" alt="展示室（お気に入り・フィルタ）">
+  <img src="docs/screenshots/screen-detail.png" width="200" alt="遺物詳細（画像・ステータス・解説文）">
+</p>
+<p align="center">
+  <img src="docs/screenshots/dig-excavating.png" width="200" alt="ファミコン風の発掘アニメ（女の子）">
+  <img src="docs/screenshots/dig-new-find.png" width="200" alt="しんはっけん！バナー">
+  <img src="docs/screenshots/dig-scold.png" width="200" alt="発掘済み＝お師匠様に叱られる">
+</p>
+<p align="center">
+  <img src="docs/screenshots/screen-settings.png" width="200" alt="設定（言語・About）">
+</p>
+
+<sub>上段: メイン画面（神話級の発掘）・展示室（お気に入り＋カテゴリ/レア度フィルタ）・遺物詳細（胡散臭い解説文つき）。中段（ファミコン風演出）: 新発見＝女の子が掘り当て・バナー・発掘済み＝お師匠様の叱責（「展示室から持ち出しちゃダメ！」）。下段: 設定（言語＋About）。*プロトタイプ/デバッグ版。アートは手続き生成（冒頭の注記参照）。*</sub>
 
 ## 仕組み（開発者向け）
 
