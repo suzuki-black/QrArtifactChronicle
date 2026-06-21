@@ -1,7 +1,8 @@
 //! チューニング定数・予約タグ。reference/src/constants.ts と完全一致させる。
 
 /// 現行の生成版（docs/06 6.4）。
-pub const GEN_VERSION: u32 = 1;
+/// v2: 出土の系譜（提案01）導入。参照網・参照文・合本で出力テキストが変化。
+pub const GEN_VERSION: u32 = 2;
 
 // 🔒 RNGストリームのタグ（docs/00 0.4.4）。一度決めたら変更不可。
 pub const TAG_RARITY: &str = "rarity";

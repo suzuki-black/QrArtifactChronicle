@@ -108,5 +108,21 @@ fn main() {
         }
         exit(1);
     }
+
+    // 4) 出土の系譜: 参照グラフ生成（提案01 §3.1）。
+    db.seed_references().expect("seed references");
+    println!("  artifact_reference rows: {}", db.count_references());
+
+    // 5) 到達性CIゲート（提案01 §4）: 全 to_set がランダムQRから現実的試行内で出現するか。
+    let unreachable = db.verify_reference_reachability(50_000);
+    if unreachable.is_empty() {
+        println!("  ✅ reachability OK: 全参照先がサンプリングで到達可能");
+    } else {
+        eprintln!("  ❌ reachability FAILED: {} 件の到達不能", unreachable.len());
+        for u in unreachable.iter().take(20) {
+            eprintln!("     - {u}");
+        }
+        exit(1);
+    }
     println!("== done ==");
 }

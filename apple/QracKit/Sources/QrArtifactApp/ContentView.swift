@@ -41,7 +41,9 @@ struct ContentView: View {
                         .transition(.move(edge: .trailing))
                 case .detail:
                     if let sel = selected {
-                        ArtifactDetailView(model: model, item: sel, onBack: { go(.exhibition) })
+                        ArtifactDetailView(model: model, item: sel, onBack: { go(.exhibition) },
+                                           onOpen: { c in selected = c })
+                            .id(sel.id)
                             .transition(.move(edge: .trailing))
                     }
                 case .camera:

@@ -1,4 +1,5 @@
 import SwiftUI
+import QracFFI
 
 /// 遺物の詳細ページ。メイン画面に似ているが、操作系は無く「もどる」だけ。
 struct ArtifactDetailView: View {
@@ -6,6 +7,8 @@ struct ArtifactDetailView: View {
     @EnvironmentObject var settings: Settings
     let item: GameModel.Collected
     let onBack: () -> Void
+    /// 関連遺物（発掘済み）をタップしたときの遷移。表示中の item を差し替える。
+    var onOpen: (GameModel.Collected) -> Void = { _ in }
 
     @State private var desc: String = ""
     private let detailLabel = Color(white: 0.38)
@@ -74,6 +77,7 @@ struct ArtifactDetailView: View {
             }
             statGrid
             bookExcerpt
+            relatedSection
         }
         .padding(14).background(Color.white)
         .clipShape(RoundedRectangle(cornerRadius: 18))
@@ -113,6 +117,74 @@ struct ArtifactDetailView: View {
         .background(Color(red: 0.97, green: 0.95, blue: 0.88))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.brown.opacity(0.35), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    // MARK: - 関連遺物（出土の系譜, 提案01 §5）
+
+    @ViewBuilder private var relatedSection: some View {
+        let refs = model.references(for: item)
+        if !refs.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "point.3.connected.trianglepath.dotted").foregroundStyle(.brown)
+                    Text(settings.t("出土の系譜", "Genealogy")).font(.subheadline.bold()).foregroundStyle(.brown)
+                }
+                ForEach(refs, id: \.toSet) { ref in
+                    relatedRow(ref)
+                }
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color(red: 0.95, green: 0.96, blue: 0.93))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.brown.opacity(0.3), lineWidth: 1))
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+        }
+    }
+
+    /// 参照の種別ラベル。
+    private func kindLabel(_ kind: String) -> String {
+        switch kind {
+        case "pair":  return settings.t("対をなす", "Pair")
+        case "cites": return settings.t("言及する", "Cites")
+        case "rival": return settings.t("好敵手", "Rival")
+        default:      return kind
+        }
+    }
+
+    @ViewBuilder private func relatedRow(_ ref: Reference) -> some View {
+        let owned = model.owns(set: ref.toSet)
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 8) {
+                chip(kindLabel(ref.kind), .indigo)
+                if owned {
+                    Button {
+                        if let target = model.collected(ofType: ref.toSet) { onOpen(target) }
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text(ref.toLabel).font(.callout.bold()).foregroundStyle(.blue)
+                                .multilineTextAlignment(.leading)
+                            Image(systemName: "chevron.right").font(.caption2).foregroundStyle(.blue)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    HStack(spacing: 4) {
+                        Image(systemName: "lock.fill").font(.caption2)
+                        Text(ref.toLabel).font(.callout)
+                    }
+                    .foregroundStyle(detailLabel)
+                }
+                Spacer(minLength: 0)
+            }
+            if owned, let combined = model.combinedDescription(from: item, ref: ref) {
+                Text(combined).font(.caption).foregroundStyle(.black.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true).lineSpacing(2)
+                    .padding(.leading, 2)
+            } else if !owned {
+                Text(settings.t("発掘すると解禁", "Excavate to unlock"))
+                    .font(.caption2).foregroundStyle(detailLabel).padding(.leading, 2)
+            }
+        }
     }
 
     private func chip(_ text: String, _ color: Color) -> some View {

@@ -2,6 +2,7 @@
 //! 「詳説 世界の遺物（萬象書房 1890年刊）」からの抜粋という体裁。決定論（seed 由来）。
 //! 日本語/英語の両対応。言語は表示テキストのみに影響し、ハッシュ・属性には一切影響しない。
 //! 各言語の語句配列は同じ長さに保ち、同一 seed で「同じ選択」を別言語で出す。
+use crate::genealogy::{RefKind, RefMeta};
 use crate::hash::uint_below;
 use crate::types::DerivedAttributes;
 
@@ -59,11 +60,46 @@ fn gen_place(seed: &[u8], lang: Lang) -> String {
 }
 
 /// 民明書房調の解説文を生成する（本文のみ。書名・出版社はUI側で付与）。
-pub fn describe(seed: &[u8], a: &DerivedAttributes, lang: Lang) -> String {
-    match lang {
+/// `refs` は呼び出し側（qrac-render/ffi）が解決した参照メタ（判断B: DBアクセスは外）。
+/// 空なら従来どおり参照文なし。1件以上なら `seed + kind` で1件を決定論選択し本文末尾に1文付加。
+pub fn describe(seed: &[u8], a: &DerivedAttributes, refs: &[RefMeta], lang: Lang) -> String {
+    let body = match lang {
         Lang::Ja => describe_ja(seed, a),
         Lang::En => describe_en(seed, a),
+    };
+    match ref_sentence(seed, refs, lang) {
+        Some(s) => format!("{body}{s}"),
+        None => body,
     }
+}
+
+/// 参照文（1文）。refs から `seed:ref` で1件を決定論選択し、kind 別テンプレで描く。
+/// EN は本文同様、先頭に半角スペースを置いて連結する。
+fn ref_sentence(seed: &[u8], refs: &[RefMeta], lang: Lang) -> Option<String> {
+    if refs.is_empty() {
+        return None;
+    }
+    let idx = uint_below(seed, "text:ref", refs.len() as u32) as usize;
+    let r = &refs[idx];
+    let label = &r.to_label;
+    Some(match (lang, r.kind) {
+        (Lang::Ja, RefKind::Pair) => format!("なお本品は、〈{label}〉と対をなすものと伝わる。"),
+        (Lang::Ja, RefKind::Cites) => {
+            format!("その銘の片隅には、〈{label}〉への言及が確かに見て取れる。")
+        }
+        (Lang::Ja, RefKind::Rival) => {
+            format!("また〈{label}〉とは、久しく覇を競いし好敵手であったという。")
+        }
+        (Lang::En, RefKind::Pair) => {
+            format!(" It is, moreover, said to form a pair with the 〈{label}〉.")
+        }
+        (Lang::En, RefKind::Cites) => {
+            format!(" In a corner of its inscription, a clear mention of the 〈{label}〉 may be discerned.")
+        }
+        (Lang::En, RefKind::Rival) => {
+            format!(" It is told, too, to have long vied for supremacy with the 〈{label}〉, a worthy foe.")
+        }
+    })
 }
 
 fn describe_ja(seed: &[u8], a: &DerivedAttributes) -> String {

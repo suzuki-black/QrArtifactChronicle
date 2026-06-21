@@ -5,10 +5,28 @@
 //! 種データ（seed_full）は最小スタンドイン。本物のDB生成は qrac-assetgen（Step 3）が担う。
 
 use qrac_core::constants::{CATEGORIES, CIVILIZATIONS, ERAS};
-use qrac_core::hash::uint_below;
+use qrac_core::hash::{make_seed, uint_below};
 use rusqlite::{params, Connection, Params};
+use std::collections::HashSet;
 
 pub const TAG_PICK: &str = "pick";
+
+/// 参照エッジの採否しきい値（%）。型ごとの参照本数を Q1（典型0〜1・最大2）に収める。
+/// しきい値を変えると参照網＝出力テキストが変わるため、変更時は GEN_VERSION を bump。
+const REF_ADOPT_PCT: u32 = 55;
+
+/// 参照エッジ (from,to,kind) を採用するか（安定ハッシュ・個体非依存）。
+fn ref_adopted(from: i64, to: i64, kind: &str) -> bool {
+    let s = make_seed(format!("ref:{from}:{to}:{kind}").as_bytes());
+    uint_below(&s, "ref:adopt", 100) < REF_ADOPT_PCT
+}
+
+fn cat_index(name: &str) -> usize {
+    CATEGORIES
+        .iter()
+        .position(|(c, _)| *c == name)
+        .unwrap_or_else(|| panic!("category {name} not in CATEGORIES"))
+}
 
 #[derive(Debug, Clone)]
 pub struct BaseArtifact {
@@ -57,7 +75,15 @@ impl ArtifactDb {
                 is_global    INTEGER NOT NULL DEFAULT 0
             );
             CREATE INDEX IF NOT EXISTS idx_lookup
-                ON base_artifact(civ,era,category,base_rarity,id);",
+                ON base_artifact(civ,era,category,base_rarity,id);
+            CREATE TABLE IF NOT EXISTS artifact_reference(
+                from_set INTEGER NOT NULL,   -- 引用元 image_set_id（型, 判断A）
+                to_set   INTEGER NOT NULL,   -- 引用先 image_set_id（型）
+                kind     TEXT NOT NULL,      -- 'pair' | 'cites' | 'rival'
+                PRIMARY KEY (from_set, to_set, kind)
+            );
+            CREATE INDEX IF NOT EXISTS idx_ref_from
+                ON artifact_reference(from_set);",
         )
     }
 
@@ -100,6 +126,127 @@ impl ArtifactDb {
                 |r| r.get(0),
             )
             .unwrap_or(0)
+    }
+
+    // ── 出土の系譜（参照グラフ, 提案01）─────────────────────────────────────────
+
+    /// 参照グラフを決定論生成（型付き規則＋安定ハッシュ採否, §3.1）。
+    /// image_set_id = ci*100+ei*10+ki（seed_full / assetgen と一致）で型を畳む。
+    /// 規則:
+    ///   - pair  : 同 (civ,era) の weapon ↔ ritual（双方向: 両向き行, Q2）
+    ///   - cites : 同 (civ,era) の inscription → architecture（片方向, Q2）
+    ///   - rival : 同 (era,category) で civ を隣接ペアに組む ci↔ci+1（ci 偶数のみ・双方向）。
+    ///             完全マッチングのため N が奇数なら末尾の civ は rival を持たない。
+    ///             1型あたりの rival は最大1相手に限り、発参照を Q1（最大2）に収める。
+    pub fn seed_references(&self) -> rusqlite::Result<()> {
+        let tx = self.conn.unchecked_transaction()?;
+        let ncv = CIVILIZATIONS.len();
+        let nera = ERAS.len();
+        let ncat = CATEGORIES.len();
+        let weapon = cat_index("weapon");
+        let ritual = cat_index("ritual");
+        let inscription = cat_index("inscription");
+        let architecture = cat_index("architecture");
+
+        // 採用エッジを集約（重複排除）。値: (from,to,kind)
+        let mut edges: HashSet<(i64, i64, &'static str)> = HashSet::new();
+        let set = |ci: usize, ei: usize, ki: usize| (ci * 100 + ei * 10 + ki) as i64;
+
+        for ci in 0..ncv {
+            for ei in 0..nera {
+                // pair: weapon ↔ ritual（双方向）
+                let (w, r) = (set(ci, ei, weapon), set(ci, ei, ritual));
+                if ref_adopted(w, r, "pair") {
+                    edges.insert((w, r, "pair"));
+                    edges.insert((r, w, "pair"));
+                }
+                // cites: inscription → architecture（片方向）
+                let (ins, arc) = (set(ci, ei, inscription), set(ci, ei, architecture));
+                if ref_adopted(ins, arc, "cites") {
+                    edges.insert((ins, arc, "cites"));
+                }
+                // rival: 同 (era,category) を隣接ペア ci↔ci+1（ci 偶数のみ）で双方向に結ぶ。
+                if ci % 2 == 0 {
+                    let cj = ci + 1;
+                    if cj < ncv {
+                        for ki in 0..ncat {
+                            let (a, b) = (set(ci, ei, ki), set(cj, ei, ki));
+                            if ref_adopted(a, b, "rival") {
+                                edges.insert((a, b, "rival"));
+                                edges.insert((b, a, "rival"));
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        let mut rows: Vec<(i64, i64, &str)> = edges.into_iter().collect();
+        rows.sort(); // 決定論的書込み順
+        for (from, to, kind) in rows {
+            debug_assert_ne!(from, to, "self-reference must not be generated");
+            tx.execute(
+                "INSERT OR IGNORE INTO artifact_reference(from_set,to_set,kind) VALUES(?1,?2,?3)",
+                params![from, to, kind],
+            )?;
+        }
+        tx.commit()
+    }
+
+    pub fn count_references(&self) -> i64 {
+        self.conn
+            .query_row("SELECT COUNT(*) FROM artifact_reference", [], |r| r.get(0))
+            .unwrap_or(0)
+    }
+
+    /// 型 `from_set` の発する参照一覧 (to_set, kind)。詳細画面「関連遺物」用。
+    pub fn references_from(&self, from_set: i64) -> Vec<(i64, String)> {
+        let mut stmt = self
+            .conn
+            .prepare(
+                "SELECT to_set, kind FROM artifact_reference WHERE from_set=?1 ORDER BY to_set, kind",
+            )
+            .expect("prepare references_from");
+        let rows = stmt
+            .query_map(params![from_set], |r| {
+                Ok((r.get::<_, i64>(0)?, r.get::<_, String>(1)?))
+            })
+            .expect("query references_from");
+        rows.filter_map(Result::ok).collect()
+    }
+
+    fn collect_ref_targets(&self) -> HashSet<i64> {
+        let mut stmt = self
+            .conn
+            .prepare("SELECT DISTINCT to_set FROM artifact_reference")
+            .expect("prepare targets");
+        let rows = stmt
+            .query_map([], |r| r.get::<_, i64>(0))
+            .expect("query targets");
+        rows.filter_map(Result::ok).collect()
+    }
+
+    /// 到達性CIゲート（§4）: ランダムQRからの導出→base選択をサンプリングし、
+    /// 全 `to_set` が現実的試行回数内で出現するか検証。未到達の型名リストを返す（空=合格）。
+    pub fn verify_reference_reachability(&self, samples: usize) -> Vec<String> {
+        let targets = self.collect_ref_targets();
+        if targets.is_empty() {
+            return Vec::new();
+        }
+        let mut seen: HashSet<i64> = HashSet::new();
+        for i in 0..samples {
+            let key = format!("reach-sample-{i}");
+            let attr = qrac_core::derive_from_string(&key, None);
+            let seed = make_seed(&qrac_core::normalize::normalize_key(key.as_bytes()));
+            let b = self.select_base(&seed, &attr.civ, &attr.era, &attr.category, attr.base_rarity);
+            seen.insert(b.image_set_id);
+        }
+        let mut missing: Vec<i64> = targets.difference(&seen).copied().collect();
+        missing.sort();
+        missing
+            .into_iter()
+            .map(|t| format!("unreachable to_set {t}"))
+            .collect()
     }
 
     /// 全 (civ × era × category) で base_rarity 1..10 が揃っているか検証（docs/05 5.6 制約 / CIゲート）。
@@ -328,5 +475,54 @@ mod tests {
         // 決定論
         let b2 = db.select_base(&seed, "desert", "ancient", "weapon", 10);
         assert_eq!(b.id, b2.id);
+    }
+
+    #[test]
+    fn references_are_deterministic_acyclic_and_reachable() {
+        let a = ArtifactDb::open_in_memory().unwrap();
+        a.seed_full().unwrap();
+        a.seed_references().unwrap();
+        let b = ArtifactDb::open_in_memory().unwrap();
+        b.seed_full().unwrap();
+        b.seed_references().unwrap();
+        // 決定論: 件数一致
+        assert_eq!(a.count_references(), b.count_references());
+        assert!(a.count_references() > 0, "参照が1件も生成されない");
+
+        // 自己参照なし & 双方向 kind の対称性（pair/rival は両向き行）
+        let mut stmt = a
+            .conn
+            .prepare("SELECT from_set,to_set,kind FROM artifact_reference")
+            .unwrap();
+        let all: Vec<(i64, i64, String)> = stmt
+            .query_map([], |r| Ok((r.get(0)?, r.get(1)?, r.get(2)?)))
+            .unwrap()
+            .filter_map(Result::ok)
+            .collect();
+        for (f, t, k) in &all {
+            assert_ne!(f, t, "self-reference");
+            if k == "pair" || k == "rival" {
+                assert!(
+                    all.iter().any(|(f2, t2, k2)| f2 == t && t2 == f && k2 == k),
+                    "双方向 {k} の逆向き行が無い: {f}->{t}"
+                );
+            }
+        }
+
+        // 型ごとの発参照は最大2（Q1）
+        let mut out: std::collections::HashMap<i64, usize> = std::collections::HashMap::new();
+        for (f, _, _) in &all {
+            *out.entry(*f).or_default() += 1;
+        }
+        assert!(
+            out.values().all(|&c| c <= 2),
+            "発参照が型あたり2を超える: {out:?}"
+        );
+
+        // 到達性CIゲート: サンプリングで全 to_set 到達
+        assert!(
+            a.verify_reference_reachability(20_000).is_empty(),
+            "参照先が到達不能"
+        );
     }
 }

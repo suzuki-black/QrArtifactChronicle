@@ -48,6 +48,9 @@ final class GameModel: ObservableObject {
         let wear: Bool
         let stage: Int
         let png: Data
+        /// 型キー（=image_set_id, 提案01 判断D）。旧 collection.json には無いため Optional。
+        /// 読込時に欠落分を deriveQr でバックフィルする（§2.2）。
+        var imageSetId: Int?
     }
     @Published var collected: [Collected] = []
 
@@ -73,6 +76,18 @@ final class GameModel: ObservableObject {
               let items = try? JSONDecoder().decode([Collected].self, from: data) else { return }
         collected = items
         discovered = Set(items.map(\.id))
+        backfillImageSetIds()
+    }
+
+    /// 旧 collection.json（imageSetId 欠落）を deriveQr で補完（§2.2 バックフィル）。
+    /// 型キーは text から決定論的に復元できるため、移行不要で後付けできる。
+    private func backfillImageSetIds() {
+        var changed = false
+        for i in collected.indices where collected[i].imageSetId == nil {
+            collected[i].imageSetId = Int(deriveQr(text: collected[i].text).imageSetId)
+            changed = true
+        }
+        if changed { save() }
     }
 
     private func save() {
@@ -110,7 +125,8 @@ final class GameModel: ObservableObject {
             preservation: a.preservationScore, dirt: a.dirtLayerId,
             chip: a.damage.chip, crack: a.damage.crack, wear: a.damage.wear,
             stage: Int(r.matchedStage),
-            png: Self.thumbnailPNG(Data(r.png))))
+            png: Self.thumbnailPNG(Data(r.png)),
+            imageSetId: Int(a.imageSetId)))
         save()
     }
 
@@ -210,6 +226,30 @@ final class GameModel: ObservableObject {
     /// 指定 Collected の説明文を現在の言語で生成。
     func description(for item: Collected) -> String {
         describeQr(text: item.text, lang: lang)
+    }
+
+    // MARK: - 出土の系譜（提案01）
+
+    /// 型 `set` を所持しているか（型=image_set 単位の所持判定, §2.2）。
+    func owns(set: Int64) -> Bool {
+        collected.contains { $0.imageSetId == Int(set) }
+    }
+
+    /// 型 `set` を持つ収集物（あれば）。関連遺物タップ時の遷移先。
+    func collected(ofType set: Int64) -> Collected? {
+        collected.first { $0.imageSetId == Int(set) }
+    }
+
+    /// 指定 Collected の関連遺物（現在言語の型呼称つき）。型キー未確定なら空。
+    func references(for item: Collected) -> [Reference] {
+        guard let set = item.imageSetId else { return [] }
+        return referencesOf(imageSetId: Int64(set), lang: lang)
+    }
+
+    /// 合本解説（型ペア・canonical）。両型所持時に表示（§2.3）。
+    func combinedDescription(from item: Collected, ref: Reference) -> String? {
+        guard let from = item.imageSetId, owns(set: ref.toSet) else { return nil }
+        return describePair(setA: Int64(from), setB: ref.toSet, kind: ref.kind, lang: lang)
     }
 
     /// 「発掘」ボタン: 新規なら採掘アニメ→新発見、既出なら師匠が叱る→持ち出し。いずれも最後に遺物表示。

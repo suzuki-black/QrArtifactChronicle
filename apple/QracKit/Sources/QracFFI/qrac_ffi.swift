@@ -448,6 +448,22 @@ fileprivate struct FfiConverterInt32: FfiConverterPrimitive {
 #if swift(>=5.8)
 @_documentation(visibility: private)
 #endif
+fileprivate struct FfiConverterInt64: FfiConverterPrimitive {
+    typealias FfiType = Int64
+    typealias SwiftType = Int64
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Int64 {
+        return try lift(readInt(&buf))
+    }
+
+    public static func write(_ value: Int64, into buf: inout [UInt8]) {
+        writeInt(&buf, lower(value))
+    }
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
 fileprivate struct FfiConverterDouble: FfiConverterPrimitive {
     typealias FfiType = Double
     typealias SwiftType = Double
@@ -557,6 +573,10 @@ public struct Artifact {
     public var civ: String
     public var era: String
     public var category: String
+    /**
+     * 型キー（=image_set_id, 提案01 判断D）。収集の imageSetId バックフィル・参照照合用。
+     */
+    public var imageSetId: Int64
     public var color: ColorMod
     public var dirtLayerId: String
     public var damage: Damage
@@ -564,7 +584,10 @@ public struct Artifact {
 
     // Default memberwise initializers are never public by default, so we
     // declare one manually.
-    public init(artifactHash: String, baseRarity: UInt32, eraBonus: UInt32, finalRarity: UInt32, isMythic: Bool, civ: String, era: String, category: String, color: ColorMod, dirtLayerId: String, damage: Damage, preservationScore: Double) {
+    public init(artifactHash: String, baseRarity: UInt32, eraBonus: UInt32, finalRarity: UInt32, isMythic: Bool, civ: String, era: String, category: String, 
+        /**
+         * 型キー（=image_set_id, 提案01 判断D）。収集の imageSetId バックフィル・参照照合用。
+         */imageSetId: Int64, color: ColorMod, dirtLayerId: String, damage: Damage, preservationScore: Double) {
         self.artifactHash = artifactHash
         self.baseRarity = baseRarity
         self.eraBonus = eraBonus
@@ -573,6 +596,7 @@ public struct Artifact {
         self.civ = civ
         self.era = era
         self.category = category
+        self.imageSetId = imageSetId
         self.color = color
         self.dirtLayerId = dirtLayerId
         self.damage = damage
@@ -611,6 +635,9 @@ extension Artifact: Equatable, Hashable {
         if lhs.category != rhs.category {
             return false
         }
+        if lhs.imageSetId != rhs.imageSetId {
+            return false
+        }
         if lhs.color != rhs.color {
             return false
         }
@@ -635,6 +662,7 @@ extension Artifact: Equatable, Hashable {
         hasher.combine(civ)
         hasher.combine(era)
         hasher.combine(category)
+        hasher.combine(imageSetId)
         hasher.combine(color)
         hasher.combine(dirtLayerId)
         hasher.combine(damage)
@@ -659,6 +687,7 @@ public struct FfiConverterTypeArtifact: FfiConverterRustBuffer {
                 civ: FfiConverterString.read(from: &buf), 
                 era: FfiConverterString.read(from: &buf), 
                 category: FfiConverterString.read(from: &buf), 
+                imageSetId: FfiConverterInt64.read(from: &buf), 
                 color: FfiConverterTypeColorMod.read(from: &buf), 
                 dirtLayerId: FfiConverterString.read(from: &buf), 
                 damage: FfiConverterTypeDamage.read(from: &buf), 
@@ -675,6 +704,7 @@ public struct FfiConverterTypeArtifact: FfiConverterRustBuffer {
         FfiConverterString.write(value.civ, into: &buf)
         FfiConverterString.write(value.era, into: &buf)
         FfiConverterString.write(value.category, into: &buf)
+        FfiConverterInt64.write(value.imageSetId, into: &buf)
         FfiConverterTypeColorMod.write(value.color, into: &buf)
         FfiConverterString.write(value.dirtLayerId, into: &buf)
         FfiConverterTypeDamage.write(value.damage, into: &buf)
@@ -861,6 +891,105 @@ public func FfiConverterTypeDamage_lower(_ value: Damage) -> RustBuffer {
 
 
 /**
+ * 関連遺物（出土の系譜, 提案01 §5）。詳細画面「関連遺物」セクション用。
+ */
+public struct Reference {
+    /**
+     * 参照先の型キー（image_set_id）。
+     */
+    public var toSet: Int64
+    /**
+     * 'pair' | 'cites' | 'rival'。
+     */
+    public var kind: String
+    /**
+     * 参照先の型呼称（§3.4・詳細チップと同語彙）。
+     */
+    public var toLabel: String
+
+    // Default memberwise initializers are never public by default, so we
+    // declare one manually.
+    public init(
+        /**
+         * 参照先の型キー（image_set_id）。
+         */toSet: Int64, 
+        /**
+         * 'pair' | 'cites' | 'rival'。
+         */kind: String, 
+        /**
+         * 参照先の型呼称（§3.4・詳細チップと同語彙）。
+         */toLabel: String) {
+        self.toSet = toSet
+        self.kind = kind
+        self.toLabel = toLabel
+    }
+}
+
+#if compiler(>=6)
+extension Reference: Sendable {}
+#endif
+
+
+extension Reference: Equatable, Hashable {
+    public static func ==(lhs: Reference, rhs: Reference) -> Bool {
+        if lhs.toSet != rhs.toSet {
+            return false
+        }
+        if lhs.kind != rhs.kind {
+            return false
+        }
+        if lhs.toLabel != rhs.toLabel {
+            return false
+        }
+        return true
+    }
+
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(toSet)
+        hasher.combine(kind)
+        hasher.combine(toLabel)
+    }
+}
+
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public struct FfiConverterTypeReference: FfiConverterRustBuffer {
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> Reference {
+        return
+            try Reference(
+                toSet: FfiConverterInt64.read(from: &buf), 
+                kind: FfiConverterString.read(from: &buf), 
+                toLabel: FfiConverterString.read(from: &buf)
+        )
+    }
+
+    public static func write(_ value: Reference, into buf: inout [UInt8]) {
+        FfiConverterInt64.write(value.toSet, into: &buf)
+        FfiConverterString.write(value.kind, into: &buf)
+        FfiConverterString.write(value.toLabel, into: &buf)
+    }
+}
+
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReference_lift(_ buf: RustBuffer) throws -> Reference {
+    return try FfiConverterTypeReference.lift(buf)
+}
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+public func FfiConverterTypeReference_lower(_ value: Reference) -> RustBuffer {
+    return FfiConverterTypeReference.lower(value)
+}
+
+
+/**
  * 合成済み画像（PNGバイト列＋寸法）＋解説文。
  */
 public struct RenderedImage {
@@ -872,11 +1001,15 @@ public struct RenderedImage {
      */
     public var baseName: String
     /**
+     * 型キー（=image_set_id, 提案01 判断D）。
+     */
+    public var imageSetId: Int64
+    /**
      * 当たったフォールバック段（1..6, 7=GLOBAL）。
      */
     public var matchedStage: UInt8
     /**
-     * 民明書房調の解説文（「詳説 世界の遺物」より抜粋の体裁）。
+     * 民明書房調の解説文（「詳説 世界の遺物」より抜粋の体裁。参照文を含みうる）。
      */
     public var description: String
 
@@ -887,15 +1020,19 @@ public struct RenderedImage {
          * 選ばれたベース遺物の名称（DB由来）。
          */baseName: String, 
         /**
+         * 型キー（=image_set_id, 提案01 判断D）。
+         */imageSetId: Int64, 
+        /**
          * 当たったフォールバック段（1..6, 7=GLOBAL）。
          */matchedStage: UInt8, 
         /**
-         * 民明書房調の解説文（「詳説 世界の遺物」より抜粋の体裁）。
+         * 民明書房調の解説文（「詳説 世界の遺物」より抜粋の体裁。参照文を含みうる）。
          */description: String) {
         self.width = width
         self.height = height
         self.png = png
         self.baseName = baseName
+        self.imageSetId = imageSetId
         self.matchedStage = matchedStage
         self.description = description
     }
@@ -920,6 +1057,9 @@ extension RenderedImage: Equatable, Hashable {
         if lhs.baseName != rhs.baseName {
             return false
         }
+        if lhs.imageSetId != rhs.imageSetId {
+            return false
+        }
         if lhs.matchedStage != rhs.matchedStage {
             return false
         }
@@ -934,6 +1074,7 @@ extension RenderedImage: Equatable, Hashable {
         hasher.combine(height)
         hasher.combine(png)
         hasher.combine(baseName)
+        hasher.combine(imageSetId)
         hasher.combine(matchedStage)
         hasher.combine(description)
     }
@@ -952,6 +1093,7 @@ public struct FfiConverterTypeRenderedImage: FfiConverterRustBuffer {
                 height: FfiConverterUInt32.read(from: &buf), 
                 png: FfiConverterData.read(from: &buf), 
                 baseName: FfiConverterString.read(from: &buf), 
+                imageSetId: FfiConverterInt64.read(from: &buf), 
                 matchedStage: FfiConverterUInt8.read(from: &buf), 
                 description: FfiConverterString.read(from: &buf)
         )
@@ -962,6 +1104,7 @@ public struct FfiConverterTypeRenderedImage: FfiConverterRustBuffer {
         FfiConverterUInt32.write(value.height, into: &buf)
         FfiConverterData.write(value.png, into: &buf)
         FfiConverterString.write(value.baseName, into: &buf)
+        FfiConverterInt64.write(value.imageSetId, into: &buf)
         FfiConverterUInt8.write(value.matchedStage, into: &buf)
         FfiConverterString.write(value.description, into: &buf)
     }
@@ -1078,6 +1221,50 @@ fileprivate struct FfiConverterOptionInt32: FfiConverterRustBuffer {
         }
     }
 }
+
+#if swift(>=5.8)
+@_documentation(visibility: private)
+#endif
+fileprivate struct FfiConverterSequenceTypeReference: FfiConverterRustBuffer {
+    typealias SwiftType = [Reference]
+
+    public static func write(_ value: [Reference], into buf: inout [UInt8]) {
+        let len = Int32(value.count)
+        writeInt(&buf, len)
+        for item in value {
+            FfiConverterTypeReference.write(item, into: &buf)
+        }
+    }
+
+    public static func read(from buf: inout (data: Data, offset: Data.Index)) throws -> [Reference] {
+        let len: Int32 = try readInt(&buf)
+        var seq = [Reference]()
+        seq.reserveCapacity(Int(len))
+        for _ in 0 ..< len {
+            seq.append(try FfiConverterTypeReference.read(from: &buf))
+        }
+        return seq
+    }
+}
+public func categoryLabel(category: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_category_label(
+        FfiConverterString.lower(category),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+/**
+ * 軸単体の表示呼称（Q7=(i): Swift の civName/eraName/categoryName が呼ぶ単一の出所）。
+ */
+public func civLabel(civ: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_civ_label(
+        FfiConverterString.lower(civ),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
 /**
  * アセットディレクトリを設定（例: アプリ同梱の assets/ パス）。
  */
@@ -1109,12 +1296,45 @@ public func deriveQrWithYear(text: String, year: Int32?) -> Artifact  {
 })
 }
 /**
+ * 合本解説（型ペア・canonical, 判断E）。両型所持時に詳細画面で表示。
+ * kind 不正値は 'pair' とみなす。
+ */
+public func describePair(setA: Int64, setB: Int64, kind: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_describe_pair(
+        FfiConverterInt64.lower(setA),
+        FfiConverterInt64.lower(setB),
+        FfiConverterString.lower(kind),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+/**
  * 解説文のみを生成（画像なし・軽量）。言語切替時の再生成や展示室表示に使う。
  */
 public func describeQr(text: String, lang: Lang) -> String  {
     return try!  FfiConverterString.lift(try! rustCall() {
     uniffi_qrac_ffi_fn_func_describe_qr(
         FfiConverterString.lower(text),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+public func eraLabel(era: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_era_label(
+        FfiConverterString.lower(era),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+/**
+ * 型 `image_set_id` の関連遺物一覧（詳細画面「関連遺物」用, §5）。
+ */
+public func referencesOf(imageSetId: Int64, lang: Lang) -> [Reference]  {
+    return try!  FfiConverterSequenceTypeReference.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_references_of(
+        FfiConverterInt64.lower(imageSetId),
         FfiConverterTypeLang_lower(lang),$0
     )
 })
@@ -1142,6 +1362,30 @@ public func renderQrWithYear(text: String, year: Int32?, lang: Lang) -> Rendered
     )
 })
 }
+/**
+ * 型呼称（判断C・Q7=(i)）。Swift はこれを呼んで参照先名／チップを Rust 語彙で表示する。
+ */
+public func typeLabel(civ: String, era: String, category: String, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_type_label(
+        FfiConverterString.lower(civ),
+        FfiConverterString.lower(era),
+        FfiConverterString.lower(category),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
+/**
+ * image_set_id から型呼称を解決（GLOBAL/範囲外は汎称）。
+ */
+public func typeLabelForSet(imageSetId: Int64, lang: Lang) -> String  {
+    return try!  FfiConverterString.lift(try! rustCall() {
+    uniffi_qrac_ffi_fn_func_type_label_for_set(
+        FfiConverterInt64.lower(imageSetId),
+        FfiConverterTypeLang_lower(lang),$0
+    )
+})
+}
 
 private enum InitializationResult {
     case ok
@@ -1158,6 +1402,12 @@ private let initializationResult: InitializationResult = {
     if bindings_contract_version != scaffolding_contract_version {
         return InitializationResult.contractVersionMismatch
     }
+    if (uniffi_qrac_ffi_checksum_func_category_label() != 56745) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_civ_label() != 15795) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qrac_ffi_checksum_func_configure_assets() != 6867) {
         return InitializationResult.apiChecksumMismatch
     }
@@ -1167,13 +1417,28 @@ private let initializationResult: InitializationResult = {
     if (uniffi_qrac_ffi_checksum_func_derive_qr_with_year() != 25988) {
         return InitializationResult.apiChecksumMismatch
     }
+    if (uniffi_qrac_ffi_checksum_func_describe_pair() != 5915) {
+        return InitializationResult.apiChecksumMismatch
+    }
     if (uniffi_qrac_ffi_checksum_func_describe_qr() != 59936) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_era_label() != 9125) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_references_of() != 16396) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qrac_ffi_checksum_func_render_qr() != 8441) {
         return InitializationResult.apiChecksumMismatch
     }
     if (uniffi_qrac_ffi_checksum_func_render_qr_with_year() != 28788) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_type_label() != 26599) {
+        return InitializationResult.apiChecksumMismatch
+    }
+    if (uniffi_qrac_ffi_checksum_func_type_label_for_set() != 48400) {
         return InitializationResult.apiChecksumMismatch
     }
 

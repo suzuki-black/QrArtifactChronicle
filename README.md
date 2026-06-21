@@ -45,6 +45,9 @@ No monsters, no battles, no stats to grind. QrArtifactChronicle is its own genre
   damage, preservation), so no two feel the same.
 - 🏺 **Dirt · cracks · preservation, composited live** — wear and grime are layered at render time.
 - 📜 **Invented civilizations & eras** with a deliberately pompous, dubious encyclopaedia blurb.
+- 🕸️ **Genealogy of finds** — artifact *types* deterministically cross-reference each other
+  (pair / cites / rival); owning both types unlocks a combined "co-volume" blurb, and a reachability
+  CI gate guarantees every referenced type is actually excavatable.
 - 🏛️ **Exhibition room** — auto-saved collection with search and category / rarity / favorites filters.
 - ❤️ **Favorites** — mark any artifact with ♥ (from a card or its detail view) and filter to just those.
 - 🌐 **Bilingual (English / 日本語)** — switch instantly in Settings ⚙️; even the flavour text.
@@ -160,6 +163,8 @@ Requirements: Rust (stable), Node ≥ 23.6, Xcode / Swift 6. iOS cross-builds ne
 - [x] 1024² rendering + in-memory LRU cache for regenerated detail images.
 - [x] Lightweight collection — store thumbnails, regenerate full-res detail on demand.
 - [x] Extraction regression corpus locking TS≡Rust year detection.
+- [x] Genealogy of finds — deterministic cross-references (pair / cites / rival) between artifact
+      *types*, a combined "co-volume" blurb when both types are owned, and a reachability CI gate.
 - [~] iOS foundation — Rust cross-builds for device + simulator, multi-platform XCFramework, and
       AppKit→UIKit-portable Swift. Remaining: an Xcode iOS app target + code signing (see docs/08 §8.13).
 - [ ] Android target (Kotlin bindings via cargo-ndk; Compose UI) + store signing / notarization.
@@ -210,6 +215,8 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 - 🖼️ **遺物画像をその場生成**（形・色・汚れ・破損・保存状態）— 二つと同じに感じない
 - 🏺 **汚れ・ひび・保存状態をリアルタイム合成**
 - 📜 **架空文明・架空時代**＋もったいぶった胡散臭い解説文
+- 🕸️ **出土の系譜** — 遺物“型”どうしを決定論的に相互参照（対をなす／言及する／好敵手）。
+  両方の型を所持すると合本（結合）解説が解禁。参照先は到達性CIゲートで必ず発掘可能と保証
 - 🏛️ **展示室** — 自動保存、文字検索＋カテゴリ／レア度／お気に入りフィルタ
 - ❤️ **お気に入り** — 遺物に♥を付けて（カード／詳細画面から）、お気に入りだけに絞り込み
 - 🌐 **英日二言語** — 設定⚙️で即時切替（解説文も）

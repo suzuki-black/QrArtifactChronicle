@@ -6,6 +6,7 @@ pub mod appearance;
 pub mod constants;
 pub mod derive;
 pub mod flavor;
+pub mod genealogy;
 pub mod hash;
 pub mod normalize;
 pub mod rarity;
@@ -14,4 +15,8 @@ pub mod types;
 
 pub use derive::{derive_attributes, derive_from_string};
 pub use flavor::Lang;
+pub use genealogy::{
+    category_label, civ_label, decode_image_set, describe_pair, encode_image_set, era_label,
+    type_label, type_label_from_set, RefKind, RefMeta,
+};
 pub use types::{ColorMod, Damage, DerivedAttributes};

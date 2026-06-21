@@ -37,37 +37,12 @@ final class Settings: ObservableObject {
     func ffiLang() -> Lang { isJa ? .ja : .en }
 
     // MARK: 語彙テーブル
+    // Q7=(i): 型呼称の語彙は qrac-core を単一の出所とし、FFI 経由で取得する。
+    // これにより「出土の系譜」の参照名と詳細チップの呼称が構造的に一致する（提案01 §3.4）。
 
-    func civName(_ k: String) -> String {
-        switch k {
-        case "desert": return t("砂漠文明", "Desert")
-        case "ocean": return t("海洋文明", "Ocean")
-        case "mountain": return t("山岳文明", "Mountain")
-        case "machine": return t("機械文明", "Machine")
-        case "organic": return t("有機文明", "Organic")
-        default: return k
-        }
-    }
-    func eraName(_ k: String) -> String {
-        switch k {
-        case "ancient": return t("古代", "Ancient")
-        case "medieval": return t("中世", "Medieval")
-        case "early_modern": return t("近世", "Early modern")
-        case "modern": return t("近代", "Modern")
-        case "future": return t("未来", "Future")
-        default: return k
-        }
-    }
-    func categoryName(_ k: String) -> String {
-        switch k {
-        case "weapon": return t("武器", "Weapon")
-        case "ritual": return t("祭具", "Ritual")
-        case "daily": return t("生活用品", "Daily-use")
-        case "architecture": return t("建築断片", "Architecture")
-        case "inscription": return t("碑文", "Inscription")
-        case "machine_part": return t("機械部品", "Machine part")
-        default: return k
-        }
+    func civName(_ k: String) -> String { civLabel(civ: k, lang: ffiLang()) }
+    func eraName(_ k: String) -> String { eraLabel(era: k, lang: ffiLang()) }
+    func categoryName(_ k: String) -> String { categoryLabel(category: k, lang: ffiLang())
     }
     func dirtName(_ k: String) -> String {
         switch k {
