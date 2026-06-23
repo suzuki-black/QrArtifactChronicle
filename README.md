@@ -67,6 +67,33 @@ stylized, with swap-in photographic art on the roadmap — see [docs/05](docs/05
 Every QR code you run into is a potential find. Collect them, fill your **Exhibition**, and build
 a personal archaeological archive of a world that never existed.
 
+## Download (macOS)
+
+Prebuilt **unsigned** builds are attached to the
+[**Releases**](https://github.com/suzuki-black/QrArtifactChronicle/releases) page:
+
+- **`QrArtifactChronicle-<version>-macos.dmg`** — open it, then drag the app onto **Applications**.
+- **`QrArtifactChronicle-<version>-macos.zip`** — unzip and move the app wherever you like.
+
+Requires **macOS 13+ on Apple Silicon**. The camera permission is requested only when you scan.
+
+> ⚠️ **Unsigned & un-notarized — macOS will warn you.** This is a hobby prototype, so the app is
+> **not** signed with a paid Apple Developer ID and **not** notarized by Apple. On first launch
+> Gatekeeper will refuse to open it, with a message like *"…can't be opened because Apple cannot
+> check it for malicious software."* This is **expected** and does **not** mean the app is harmful —
+> it only means I haven't set up (paid) Apple code-signing. The build is reproducible from source in
+> this repo if you'd rather build it yourself (see *Build & run*).
+>
+> **To open it anyway (pick one):**
+> 1. **Right-click (Control-click) the app → Open**, then click **Open** in the dialog. You only
+>    need to do this once; afterwards it launches normally.
+> 2. Or open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next
+>    to the QrArtifactChronicle notice.
+> 3. Or clear the quarantine flag from a terminal:
+>    ```sh
+>    xattr -dr com.apple.quarantine /Applications/QrArtifactChronicle.app
+>    ```
+
 ## How to play
 
 1. Tap **📷 Excavate with camera** (debug builds also allow typing any text, or **Random**).
@@ -232,6 +259,33 @@ Shobō* gag from the manga *Sakigake!! Otokojuku*; the publisher name and all bl
 ## 日常が発掘現場になる
 
 出会うQRすべてが発掘候補。集めて**展示室**を埋め、存在しなかった世界の考古アーカイブを作りましょう。
+
+## ダウンロード（macOS）
+
+ビルド済みの**署名なし**バイナリを
+[**Releases**](https://github.com/suzuki-black/QrArtifactChronicle/releases) に添付しています:
+
+- **`QrArtifactChronicle-<バージョン>-macos.dmg`** — 開いてアプリを **Applications** にドラッグ。
+- **`QrArtifactChronicle-<バージョン>-macos.zip`** — 展開して好きな場所に置くだけ。
+
+対応: **macOS 13 以降・Apple Silicon**。カメラ権限はスキャン時にのみ要求します。
+
+> ⚠️ **署名・公証なし — macOS に警告が出ます。** 本作は趣味のプロトタイプのため、有料の Apple
+> Developer ID による**署名をしておらず**、Apple の**公証(notarization)も受けていません**。初回起動時は
+> Gatekeeper にブロックされ、「"…"は、悪質なソフトウェアかどうかを Apple が確認できないため開けません」
+> といったメッセージが出ます。これは**仕様どおり**で、アプリが危険という意味では**ありません**——単に
+> （有料の）Apple 署名を用意していないだけです。気になる場合は本リポジトリから自分でビルドできます
+> （*Build & run* 参照。生成は完全に再現可能）。
+>
+> **それでも開く方法（いずれか）:**
+> 1. アプリを**右クリック（Control + クリック）→「開く」**→ ダイアログで**「開く」**。初回のみでOK、
+>    以後は通常どおり起動します。
+> 2. または **システム設定 → プライバシーとセキュリティ** を開き、下の方の QrArtifactChronicle の
+>    項目の横にある**「このまま開く」**をクリック。
+> 3. またはターミナルで隔離フラグを解除:
+>    ```sh
+>    xattr -dr com.apple.quarantine /Applications/QrArtifactChronicle.app
+>    ```
 
 ## 遊び方
 

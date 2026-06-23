@@ -5,6 +5,7 @@
 *.app/
 apple/headers/
 apple/.assets-build/
+apple/dist/
 rust/dist/
 
 # Kept on purpose (do NOT ignore):
